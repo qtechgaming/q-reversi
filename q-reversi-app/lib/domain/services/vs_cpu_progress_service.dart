@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../entities/game_mode.dart';
@@ -74,6 +75,10 @@ class VsCpuProgressSnapshot {
   final Map<AIDifficulty, VsCpuStats> stats;
 
   bool isUnlocked(AIDifficulty d) {
+    // 管理者モード（デバッグビルド）では全難易度を解放
+    if (kDebugMode) {
+      return VsCpuProgressService.difficultiesOrder.contains(d);
+    }
     final i = VsCpuProgressService.difficultiesOrder.indexOf(d);
     if (i < 0) return false;
     return i <= unlockedMaxIndex;

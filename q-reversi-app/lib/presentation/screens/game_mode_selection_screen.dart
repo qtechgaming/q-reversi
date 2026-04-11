@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../domain/entities/game_mode.dart';
 import '../../domain/services/tutorial_progress_service.dart';
@@ -30,6 +31,16 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
   }
 
   Future<void> _checkTutorialStatus() async {
+    // 管理者モード（デバッグビルド）ではチュートリアル制限をバイパス
+    if (kDebugMode) {
+      if (mounted) {
+        setState(() {
+          _isTutorialCompleted = true;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
     final isCompleted = await _progressService.isTutorialCompletedOrSkipped();
     if (mounted) {
       setState(() {
@@ -52,9 +63,33 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Qリバーシ',
-          style: TextStyle(color: Colors.white),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Qリバーシ',
+              style: TextStyle(color: Colors.white),
+            ),
+            if (kDebugMode) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'ADMIN',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         backgroundColor: const Color(0xFF1A1F3A),
         foregroundColor: Colors.white,

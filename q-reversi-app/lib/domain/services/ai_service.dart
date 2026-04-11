@@ -8,6 +8,13 @@ import '../entities/game_mode.dart';
 import 'game_service.dart';
 
 // ─── Quantum AI helpers (module-level) ───────────────────────────────────────
+//
+// QPVN-QR reference (qpvn_qr_v2_params.json, IBM ibm_boston, 2026-04-11)
+// 6-layer circuit (depth 48, 108 CX), job d7d1d1e5nvhs73a56emg
+//   [sv ] <Z> value = 0.1287  (statevector, initial board)
+//   [ibm] <Z> value = 0.0170  (real hardware, hardware noise ~0.75× attenuation)
+//   w = [-0.4281,-0.6716,-3.0492,-3.7182,-3.3831,0.1726,2.9113,-0.5140,
+//         -0.4048,0.1361,-0.1141,3.5162,-0.3641,-3.9528]   b = -0.2445
 
 /// Abramowitz & Stegun 7.1.26 approximation of erf(x), max error < 1.5e-7.
 double _erf(double x) {
@@ -36,7 +43,7 @@ double _classicalEval(GameState state, PlayerColor myColor) {
       if (myColor == PlayerColor.white) {
         if (piece.type == PieceType.white) {
           mine++;
-        } else if (piece.type == PieceType.black) opp++;
+        } else if (piece.type == PieceType.black) { opp++; }
       } else {
         if (piece.type == PieceType.black) {
           mine++;
@@ -243,13 +250,33 @@ class AIService {
     return candidates.first;
   }
 
-  // ─── 量子AI (FourPlyMiniMaxQR port) ────────────────────────────────────────
+  // ─── 量子AI (FourPlyMiniMaxQRV2 port) ──────────────────────────────────────
+  //
+  // 4-ply minimax with quantum P(win) terminal for Q-Reversi v2.0.
+  //
+  // v2.0 rule: CNOT creating entanglement auto-generates row+column forbidden
+  // areas for both entangled pieces (up to 4 lines) for the opponent's next
+  // 1-bit gate. This mechanic is enforced by the game engine — _tryApply()
+  // rejects moves blocked by forbidden areas, so the minimax naturally
+  // evaluates whether CNOT entanglement is beneficial in each position.
+  //
+  // Algorithm (FourPlyMiniMaxQRV2):
+  //   D1 (AI)  : Classical eval ALL → top K1
+  //   D2 (Opp) : Up to N_D2 tied-min classical → pessimistic min over subtrees
+  //   D3 (AI)  : Classical top-K3
+  //   D4 (Opp) : ALL tied-min classical → pessimistic min P(win)
+  //   Terminal : Φ(μ/√n_gray) mapped to [-1, 1]  ← quantum evaluation
+  //
+  // D2 pessimism (capped at N_D2=3 tied moves) fixes the first-mover
+  // disadvantage on v2.0 rules (white 60% → 90% vs intermediate).
+  // Benchmarked: beginner 100%, intermediate 90%, advanced 85%.
 
-  static const int _kQuantumK1 = 10; // depth-1 top candidates
-  static const int _kQuantumK3 = 3;  // depth-3 top candidates
+  static const int _kQuantumK1  = 20; // depth-1 top candidates
+  static const int _kQuantumK3  = 5;  // depth-3 top candidates
+  static const int _kQuantumND2 = 3;  // max tied D2 moves to evaluate
 
   /// 量子AI: 4-ply minimax with quantum P(win) terminal and pessimistic
-  /// depth-4 tie-breaking (port of Python FourPlyMiniMaxQR).
+  /// depth-2 and depth-4 tie-breaking (port of Python FourPlyMiniMaxQRV2).
   AIAction _thinkQuantum(
     GameState gameState,
     List<GateType> availableGates,
@@ -289,21 +316,43 @@ class AIService {
     return AIAction(gate: bestAction.$1, positions: bestAction.$2, score: bestScore);
   }
 
-  /// Depth 2 (greedy opp) → depth 3 (AI top-K3) → depth 4 (pessimistic opp).
+  /// Depth 2 (pessimistic opp, capped) → depth 3 (AI top-K3) → depth 4 (pessimistic opp).
   double _evalFromS2(GameState s1, PlayerColor myColor) {
-    // Depth 2: opponent plays greedy (argmin classical eval for us).
+    // Depth 2: limited pessimistic — evaluate up to _kQuantumND2 tied-min
+    // opponent moves and take the minimum subtree value.
     final opp1Actions = _getAllActionsForState(s1);
-    GameState s2 = s1;
-    if (opp1Actions.isNotEmpty) {
-      var minScore = double.infinity;
-      for (final a in opp1Actions) {
-        final ns = _tryApply(s1, a.$1, a.$2);
-        if (ns == null) continue;
-        final sc = _classicalEval(ns, myColor);
-        if (sc < minScore) { minScore = sc; s2 = ns; }
-      }
+    if (opp1Actions.isEmpty) {
+      return _evalD3(s1, myColor);
     }
 
+    final opp1States = <GameState>[];
+    final opp1Scores = <double>[];
+    var minD2 = double.infinity;
+    for (final a in opp1Actions) {
+      final ns = _tryApply(s1, a.$1, a.$2);
+      if (ns == null) continue;
+      final sc = _classicalEval(ns, myColor);
+      opp1States.add(ns);
+      opp1Scores.add(sc);
+      if (sc < minD2) minD2 = sc;
+    }
+    if (opp1States.isEmpty) return _evalD3(s1, myColor);
+
+    // Collect tied-min D2 states (capped at _kQuantumND2).
+    var tiedCount = 0;
+    var worstSubtree = double.infinity;
+    for (int j = 0; j < opp1States.length && tiedCount < _kQuantumND2; j++) {
+      if ((opp1Scores[j] - minD2).abs() < 1e-12) {
+        final v = _evalD3(opp1States[j], myColor);
+        if (v < worstSubtree) worstSubtree = v;
+        tiedCount++;
+      }
+    }
+    return worstSubtree.isInfinite ? _evalD3(s1, myColor) : worstSubtree;
+  }
+
+  /// Depth 3 (AI top-K3) → depth 4 (pessimistic opp).
+  double _evalD3(GameState s2, PlayerColor myColor) {
     // Depth 3: AI plays top-K3 by classical eval.
     final ai2Actions = _getAllActionsForState(s2);
     if (ai2Actions.isEmpty) return _probWinEval(s2, myColor);
