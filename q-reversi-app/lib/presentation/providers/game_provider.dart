@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import '../../data/vs_game_state_codec.dart';
+import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_state.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/position.dart';
@@ -18,12 +22,18 @@ class GameProvider extends ChangeNotifier {
   bool _isProcessing = false;
   String? _errorMessage;
   final List<GameState> _history = [];
+  /// VSモードでターン終了後の測定を1回実行済みか（再測定・勝敗の二重加算を防ぐ）
+  bool _postGameMeasurementDone = false;
   
-  GameProvider(this._gameState);
+  GameProvider(
+    this._gameState, {
+    bool postGameMeasurementCompleted = false,
+  }) : _postGameMeasurementDone = postGameMeasurementCompleted;
   
   GameState get gameState => _gameState;
   bool get isProcessing => _isProcessing;
   String? get errorMessage => _errorMessage;
+  bool get postGameMeasurementCompleted => _postGameMeasurementDone;
   bool get canUndo =>
       _gameState.gameMode == GameMode.freeRun &&
       _history.isNotEmpty &&
@@ -86,6 +96,7 @@ class GameProvider extends ChangeNotifier {
       
       _isProcessing = false;
       notifyListeners();
+      _persistVsSnapshot();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -97,10 +108,36 @@ class GameProvider extends ChangeNotifier {
   
   /// 測定操作
   void measure() {
+    final wasVsGameOver =
+        _gameState.gameMode == GameMode.vs && _gameState.isGameOver;
+    if (wasVsGameOver && _postGameMeasurementDone) {
+      return;
+    }
     // 測定時は履歴をクリア（これ以降は手を戻せない）
     _history.clear();
     _gameState = _measurementService.measure(_gameState);
+    if (wasVsGameOver) {
+      _postGameMeasurementDone = true;
+    }
     notifyListeners();
+    _persistVsSnapshot();
+  }
+
+  /// アプリバックグラウンド時など、盤面の保存用（VSモードのみ）
+  void persistVsSnapshotIfNeeded() {
+    _persistVsSnapshot();
+  }
+
+  void _persistVsSnapshot() {
+    if (_gameState.gameMode != GameMode.vs) return;
+    unawaited(
+      VsGamePersistenceService().saveSnapshot(
+        VsGameSnapshot(
+          gameState: _gameState,
+          postGameMeasurementCompleted: _postGameMeasurementDone,
+        ),
+      ),
+    );
   }
   
   /// AIのターンを処理
@@ -122,6 +159,7 @@ class GameProvider extends ChangeNotifier {
   void reset() {
     // リセット時は履歴をクリア
     _history.clear();
+    _postGameMeasurementDone = false;
     _gameState = _gameService.createInitialBoard(_gameState);
     notifyListeners();
   }
@@ -130,6 +168,7 @@ class GameProvider extends ChangeNotifier {
   void resetToState(GameState newState) {
     // リセット時は履歴をクリア
     _history.clear();
+    _postGameMeasurementDone = false;
     _isProcessing = false;
     _errorMessage = null;
     _gameState = newState;

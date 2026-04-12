@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'core/app_navigator.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/theme/app_theme.dart';
 
@@ -13,6 +13,7 @@ class QReversiApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppNavigator.key,
       title: 'Q-Reversi',
       theme: AppTheme.darkTheme,
       home: const HomeScreen(),

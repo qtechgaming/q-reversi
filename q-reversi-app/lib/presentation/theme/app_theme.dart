@@ -1,12 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/game_constants.dart';
 import '../../domain/entities/gate_type.dart';
 
 /// アプリテーマ（量子・宇宙イメージ）
 class AppTheme {
   static ThemeData get darkTheme {
+    final baseJp = GoogleFonts.notoSansJpTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    );
+    final textTheme = baseJp.copyWith(
+      displayLarge: baseJp.displayLarge?.copyWith(
+        color: const Color(GameConstants.white),
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+      ),
+      displayMedium: baseJp.displayMedium?.copyWith(
+        color: const Color(GameConstants.white),
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+      ),
+      bodyLarge: baseJp.bodyLarge?.copyWith(
+        color: const Color(GameConstants.white),
+        fontSize: 16,
+      ),
+      bodyMedium: baseJp.bodyMedium?.copyWith(
+        color: const Color(GameConstants.white),
+        fontSize: 14,
+      ),
+    );
     return ThemeData(
       useMaterial3: true,
+      fontFamily: textTheme.bodyMedium?.fontFamily,
       brightness: Brightness.dark,
       primaryColor: const Color(GameConstants.primaryPurple),
       scaffoldBackgroundColor: const Color(GameConstants.bgDark1),
@@ -21,26 +46,7 @@ class AppTheme {
         onSurface: Color(GameConstants.white),
         onError: Color(GameConstants.white),
       ),
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          color: Color(GameConstants.white),
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-        ),
-        displayMedium: TextStyle(
-          color: Color(GameConstants.white),
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-        bodyLarge: TextStyle(
-          color: Color(GameConstants.white),
-          fontSize: 16,
-        ),
-        bodyMedium: TextStyle(
-          color: Color(GameConstants.white),
-          fontSize: 14,
-        ),
-      ),
+      textTheme: textTheme,
       cardTheme: CardThemeData(
         color: const Color(GameConstants.bgDark2).withOpacity(0.8),
         elevation: 4,
@@ -62,8 +68,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           foregroundColor: const Color(GameConstants.white),
           backgroundColor: const Color(GameConstants.primaryPurple),
-          textStyle: const TextStyle(
-            color: Color(GameConstants.white),
+          textStyle: GoogleFonts.notoSansJp(
+            color: const Color(GameConstants.white),
             fontSize: 18,
           ),
         ),

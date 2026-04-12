@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/app_navigator.dart';
+import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_state.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/position.dart';
@@ -18,17 +21,22 @@ import '../widgets/piece_widget.dart';
 /// ゲーム画面
 class GameScreen extends StatefulWidget {
   final GameState gameState;
-  
+  /// 復元時: 測定済みフラグ（再測定防止）
+  final bool initialPostGameMeasurementCompleted;
+
   const GameScreen({
     super.key,
     required this.gameState,
+    this.initialPostGameMeasurementCompleted = false,
   });
-  
+
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
+  late final GameProvider _gameProvider;
+
   GateType? _selectedGate;
   List<Position> _selectedPositions = [];
   int? _selectedRow;
@@ -37,12 +45,111 @@ class _GameScreenState extends State<GameScreen> {
   String? _selectedColumnDirection; // 'top' or 'bottom'
   int _lastObservedTurnCount = -1;
   String? _entangledErrorMessage; // エンタングル駒選択時のエラーメッセージ
-  
+
+  @override
+  void initState() {
+    super.initState();
+    _gameProvider = GameProvider(
+      widget.gameState,
+      postGameMeasurementCompleted: widget.initialPostGameMeasurementCompleted,
+    );
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _gameProvider.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _gameProvider.persistVsSnapshotIfNeeded();
+    }
+  }
+
+  /// VSモードで戻る操作（測定済みはモード設定へ、その他は保存確認）
+  Future<void> _handleVsPop(BuildContext context, GameProvider provider) async {
+    if (!context.mounted) return;
+    if (provider.gameState.gameMode != GameMode.vs) {
+      Navigator.of(context).pop();
+      return;
+    }
+    if (provider.postGameMeasurementCompleted) {
+      await AppNavigator.exitVsToModeSetup();
+      return;
+    }
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1F3A),
+        title: const Text(
+          '対戦の中断',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          '続きから対戦できるように盤面を記録しておきますか？',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              '対戦に戻る',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'いいえ',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'はい',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted) return;
+    if (choice == null) return;
+    if (choice) {
+      provider.persistVsSnapshotIfNeeded();
+    } else {
+      await VsGamePersistenceService().clear();
+    }
+    if (!context.mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => GameProvider(widget.gameState),
-      child: Scaffold(
+    return ChangeNotifierProvider<GameProvider>.value(
+      value: _gameProvider,
+      child: Consumer<GameProvider>(
+        builder: (context, provider, _) {
+          final state = provider.gameState;
+          return PopScope(
+            canPop: state.gameMode != GameMode.vs,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              await _handleVsPop(context, provider);
+            },
+            child: Scaffold(
         backgroundColor: const Color(0xFF1A1F3A), // 背景色を統一（一番下まで同じ色）
         appBar: AppBar(
           title: const Text(
@@ -63,9 +170,8 @@ class _GameScreenState extends State<GameScreen> {
               ],
             ),
           ),
-          child: Consumer<GameProvider>(
-            builder: (context, provider, _) {
-              final state = provider.gameState;
+          child: Builder(
+            builder: (context) {
               final currentPlayer = state.getCurrentPlayer();
               
               // VSモード: CPU等が手を進めたタイミングで、ローカルな「2ビット選択UI」状態を残さない
@@ -170,9 +276,13 @@ class _GameScreenState extends State<GameScreen> {
                                 if (currentPlayer?.isAI != true)
                                   _buildGateSelection(context, provider, currentPlayer),
                                 
-                                // 測定ボタン（ゲーム終了時）
-                                if (state.isGameOver)
+                                // 測定ボタン（ゲーム終了時・1回のみ）／測定後は閉じる
+                                if (state.isGameOver &&
+                                    !provider.postGameMeasurementCompleted)
                                   _buildMeasurementButton(context, provider),
+                                if (state.isGameOver &&
+                                    provider.postGameMeasurementCompleted)
+                                  _buildPostGameBackButton(context),
                                 
                                 // エラーメッセージ
                                 if (provider.errorMessage != null)
@@ -189,6 +299,9 @@ class _GameScreenState extends State<GameScreen> {
             },
           ),
         ),
+      ),
+    );
+        },
       ),
     );
   }
@@ -988,6 +1101,25 @@ class _GameScreenState extends State<GameScreen> {
         ),
         child: const Text(
           '測定操作を実行',
+          style: TextStyle(fontSize: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// 測定完了後：再測定・勝敗の二重加算を防ぐため、閉じるのみ
+  Widget _buildPostGameBackButton(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: ElevatedButton(
+        onPressed: () => AppNavigator.exitVsToModeSetup(),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          backgroundColor: Colors.grey.shade700,
+          foregroundColor: Colors.white,
+        ),
+        child: const Text(
+          '閉じる',
           style: TextStyle(fontSize: 18, color: Colors.white),
         ),
       ),

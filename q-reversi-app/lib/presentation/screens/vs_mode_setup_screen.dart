@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_mode.dart';
 import '../../core/constants/game_constants.dart';
 import 'game_screen.dart';
@@ -22,6 +23,7 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
   static const Color _barWin = Color(0xFF81C784);
 
   final VsCpuProgressService _vsCpuProgressService = VsCpuProgressService();
+  final VsGamePersistenceService _vsPersistence = VsGamePersistenceService();
 
   VsMode _vsMode = VsMode.human;
   AIDifficulty _aiDifficulty = AIDifficulty.beginner;
@@ -464,7 +466,9 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
     );
   }
 
-  void _startGame(BuildContext context) {
+  Future<void> _startGame(BuildContext context) async {
+    await _vsPersistence.clear();
+    if (!context.mounted) return;
     final board = Board.create8x8();
 
     const player1 = Player(

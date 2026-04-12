@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_mode.dart';
 import '../../domain/services/tutorial_progress_service.dart';
 import 'vs_mode_setup_screen.dart';
@@ -21,6 +22,7 @@ class GameModeSelectionScreen extends StatefulWidget {
 
 class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
   final TutorialProgressService _progressService = TutorialProgressService();
+  final VsGamePersistenceService _vsPersistence = VsGamePersistenceService();
   bool _isTutorialCompleted = false;
   bool _isLoading = true;
 
@@ -150,14 +152,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 'VSモード',
                 '2人対戦のモード',
                 Icons.people,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VsModeSetupScreen(),
-                    ),
-                  );
-                },
+                () => _openVsMode(context),
                 enabled: _isTutorialCompleted,
               ),
               const SizedBox(height: 16),
@@ -253,6 +248,84 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
     );
   }
   
+  Future<void> _openVsMode(BuildContext context) async {
+    final hasSave = await _vsPersistence.hasSavedGame();
+    if (!context.mounted) return;
+    if (!hasSave) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const VsModeSetupScreen(),
+        ),
+      );
+      return;
+    }
+    final resume = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1F3A),
+        title: const Text(
+          '続きから対戦',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          '前回の続きから対戦を開始しますか？',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              '最初から',
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'はい',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted) return;
+    if (resume == null) return;
+    if (resume) {
+      final snap = await _vsPersistence.loadSnapshot();
+      if (!context.mounted) return;
+      if (snap == null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VsModeSetupScreen(),
+          ),
+        );
+        return;
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => GameScreen(
+            gameState: snap.gameState,
+            initialPostGameMeasurementCompleted:
+                snap.postGameMeasurementCompleted,
+          ),
+        ),
+      );
+    } else {
+      await _vsPersistence.clear();
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const VsModeSetupScreen(),
+        ),
+      );
+    }
+  }
+
   void _startFreeRunMode(BuildContext context) {
     final board = Board.create8x8();
     final gameState = GameState(
