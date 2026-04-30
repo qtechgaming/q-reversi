@@ -117,7 +117,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
               _buildModeCard(
                 context,
                 'チュートリアル',
-                'ゲームの遊び方と量子コンピュータの基礎知識を学習',
+                'ゲームの遊び方説明',
                 Icons.menu_book,
                 () async {
                   await Navigator.push(
