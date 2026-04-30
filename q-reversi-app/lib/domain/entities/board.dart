@@ -39,6 +39,15 @@ class Board extends Equatable {
       cols: 2,
     );
   }
+
+  /// 1×3ボードを作成（スタディ3）
+  factory Board.create1x3() {
+    return Board(
+      pieces: List.generate(1, (r) => List.generate(3, (c) => null)),
+      rows: 1,
+      cols: 3,
+    );
+  }
   
   /// 1×4ボードを作成（スタディ3）
   factory Board.create1x4() {

@@ -63,7 +63,8 @@ class PieceWidget extends StatelessWidget {
         return Colors.black;
       case PieceType.grayPlus:
       case PieceType.grayMinus:
-        // グレープラスとグレーマイナスは同じグレー色
+      case PieceType.grayNeutral:
+        // グレー系は同じベース色（無記号グレーも同じ）
         return Colors.grey.shade600;
       case PieceType.blackWhite:
         return Colors.grey.shade800;
@@ -158,7 +159,11 @@ class PieceWidget extends StatelessWidget {
         ),
       );
     }
-    
+
+    if (piece!.type == PieceType.grayNeutral) {
+      return const SizedBox.shrink();
+    }
+
     return Container();
   }
 }

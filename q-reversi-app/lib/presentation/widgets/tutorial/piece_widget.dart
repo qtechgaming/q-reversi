@@ -56,6 +56,7 @@ class PieceWidget extends StatelessWidget {
         return Colors.black;
       case PieceType.grayPlus:
       case PieceType.grayMinus:
+      case PieceType.grayNeutral:
         return Colors.grey.shade600;
       case PieceType.blackWhite:
         return Colors.grey.shade800;
@@ -143,6 +144,10 @@ class PieceWidget extends StatelessWidget {
           ),
         ),
       );
+    }
+
+    if (piece!.type == PieceType.grayNeutral) {
+      return const SizedBox.shrink();
     }
 
     return Container();

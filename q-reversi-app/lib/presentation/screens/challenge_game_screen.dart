@@ -127,7 +127,7 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     _guideSteps = [
       _GuideStep(
         key: _goalConditionKey,
-        message: '1. クリア条件を確認してください。盤面をすべて白にするか、黒にしたらレベルクリアです',
+        message: '1. クリア条件を確認してください。\n盤面をすべて白にするか、黒にしたらレベルクリアです',
       ),
       _GuideStep(
         key: _xGateButtonKey,
@@ -135,7 +135,7 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
       ),
       _GuideStep(
         key: _boardAreaKey,
-        message: '3. 適用する駒を選択してください。盤面の中をタップか、盤面の外のボタンをタップしてください',
+        message: '3. 適用する駒を選択してください。\n盤面の中をタップか、盤面の外のボタンをタップしてください',
       ),
       _GuideStep(
         key: _applyGateButtonKey,
@@ -203,12 +203,12 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
           ),
         ),
         Positioned(
-          left: targetRect.left - 4,
-          top: targetRect.top - 4,
+          left: targetRect.left + 2,
+          top: targetRect.top + 2,
           child: IgnorePointer(
             child: Container(
-              width: targetRect.width + 8,
-              height: targetRect.height + 8,
+              width: targetRect.width - 4,
+              height: targetRect.height - 4,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xCCFFFFFF), width: 1.2),
@@ -247,7 +247,7 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
                         children: [
                           Text(
                             _guideSteps[_guideStepIndex].message,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            style: const TextStyle(color: Colors.white, fontSize: 15),
                           ),
                           const SizedBox(height: 8),
                           Align(

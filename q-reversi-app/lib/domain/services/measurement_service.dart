@@ -97,6 +97,7 @@ class MeasurementService {
         
       case PieceType.grayPlus:
       case PieceType.grayMinus:
+      case PieceType.grayNeutral:
         // 50%の確率で白か黒に反転
         return _random.nextBool() ? PieceType.white : PieceType.black;
         

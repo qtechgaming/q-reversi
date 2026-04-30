@@ -115,7 +115,7 @@ class TutorialBoardWidget extends StatelessWidget {
         const maxImageSize = 300.0;
         
         // 画像と盤面の合計幅が利用可能な幅に収まるように調整
-        final totalNeededWidth = minImageSize * 2 + spacing; // 画像 + 盤面 + スペース
+        const totalNeededWidth = minImageSize * 2 + spacing; // 画像 + 盤面 + スペース
         double imageSize;
         if (totalNeededWidth <= availableWidth) {
           // 余裕がある場合は、画面幅の40%程度を使用
@@ -209,7 +209,7 @@ class TutorialBoardWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(width: spacing),
+                  const SizedBox(width: spacing),
                   // ミニ盤面（3x3）（右側）- 少し小さく
                   Column(
                     mainAxisSize: MainAxisSize.min,

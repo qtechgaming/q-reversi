@@ -10,7 +10,8 @@ class GateButton extends StatelessWidget {
   final int? cooldown;
   final VoidCallback? onTap;
   final bool isReadOnly; // 読み取り専用（相手のゲート表示用）
-  
+  final bool centerTwoBitLabel; // 2ビットゲートの文字を中央寄せする（画面固有用）
+
   const GateButton({
     super.key,
     required this.gate,
@@ -19,23 +20,25 @@ class GateButton extends StatelessWidget {
     this.cooldown,
     this.onTap,
     this.isReadOnly = false,
+    this.centerTwoBitLabel = false,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final button = ElevatedButton(
       onPressed: (isEnabled && !isReadOnly) ? onTap : null,
-      style: AppTheme.getGateButtonStyle(gate, isEnabled, isSelected, isReadOnly),
+      style:
+          AppTheme.getGateButtonStyle(gate, isEnabled, isSelected, isReadOnly),
       child: LayoutBuilder(
         builder: (context, constraints) {
           return Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Center(
-                child: gate.isTwoBitGate
+              SizedBox(
+                child: gate.isTwoBitGate && !centerTwoBitLabel
                     ? Transform.translate(
-                        offset: const Offset(-10, 0), // 左に8ピクセルオフセット
+                        offset: const Offset(-10, 0),
                         child: Text(
                           gate.displayName,
                           style: const TextStyle(
@@ -49,8 +52,8 @@ class GateButton extends StatelessWidget {
                       )
                     : Text(
                         gate.displayName,
-                        style: const TextStyle(
-                          fontSize: 16,
+                        style: TextStyle(
+                          fontSize: gate.isTwoBitGate ? 12 : 16,
                           fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.visible,
@@ -71,7 +74,7 @@ class GateButton extends StatelessWidget {
         },
       ),
     );
-    
+
     // 読み取り専用の場合は半透明にする
     if (isReadOnly) {
       return Opacity(
@@ -79,8 +82,7 @@ class GateButton extends StatelessWidget {
         child: button,
       );
     }
-    
+
     return button;
   }
 }
-

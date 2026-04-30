@@ -7,6 +7,7 @@ import 'vs_mode_setup_screen.dart';
 import 'game_screen.dart';
 import 'challenge_flow_scope.dart';
 import 'tutorial_screen.dart';
+import 'study_mode_menu_screen.dart';
 import '../../domain/entities/game_state.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
@@ -170,15 +171,17 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
               _buildModeCard(
                 context,
                 'スタディモード',
-                'Coming soon',
+                '量子コンピュータを感覚的に学習',
                 Icons.school,
-                () {},
-                enabled: false,
-                onDisabledTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('スタディモードは準備中です')),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StudyModeMenuScreen(),
+                    ),
                   );
                 },
+                enabled: _isTutorialCompleted,
               ),
             ],
           ),

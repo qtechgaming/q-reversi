@@ -81,6 +81,7 @@ double _probWinEval(GameState state, PlayerColor myColor) {
           }
         case PieceType.grayPlus:
         case PieceType.grayMinus:
+        case PieceType.grayNeutral:
           nGray++;
         case PieceType.blackWhite:
         case PieceType.whiteBlack:
@@ -656,6 +657,7 @@ class AIService {
         return myColor == PlayerColor.black ? (1.0, 0.0) : (0.0, 1.0);
       case PieceType.grayPlus:
       case PieceType.grayMinus:
+      case PieceType.grayNeutral:
       case PieceType.blackWhite:
       case PieceType.whiteBlack:
         return (0.5, 0.5);

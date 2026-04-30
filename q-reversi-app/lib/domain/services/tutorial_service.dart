@@ -138,60 +138,61 @@ class TutorialService {
 
   /// 全画面チュートリアルの全ページを取得（スライド制を廃止し、すべてのスライドを独立したページとして返す）
   static List<TutorialPage> getFullTutorial() {
-    // 元のページリストを取得
     final originalPages = _getOriginalTutorialPages();
-    
-      // ページタイトルのリスト（ページ0を廃止し、最初をページ1とする）
-      final pageTitles = [
-        'はじめに',           // 1ページ目（元のページ0）
-        'ゲーム概要',         // 2ページ目（元のページ1）
-        '量子コンピュータとは？', // 3ページ目（新規追加）
-        '量子ビット',   // 4ページ目（元のページ2-1）
-        'Qリバーシ',         // 5ページ目（元のページ2-2）
-        'グレー駒の状態',          // 6ページ目（元のページ3-1）
-        '測定',              // 7ページ目（元のページ3-2）
-        'ゲート',            // 8ページ目（元のページ4-1）
-        '量子ゲート',        // 9ページ目（元のページ4-2）
-        'Xゲート',           // 10ページ目（元のページ5）
-        'Hゲート',           // 11ページ目（元のページ6）
-        'Zゲート',           // 12ページ目（元のページ7）
-        'Yゲート',           // 13ページ目（元のページ8）
-        'SWAPゲート',        // 14ページ目（元のページ9）
-        'CNOTゲート',        // 15ページ目（元のページ10-1）
-        'ゲート習得完了',    // 16ページ目（新規追加）
-        'CNOTゲート(発展)',        // 16ページ目（元のページ10-2）
-        'CNOTゲート(発展)',        // 17ページ目（元のページ11-1）
-        'エンタングルメント', // 18ページ目（元のページ11-2）
-        'CNOT全パターン[プレイヤー白]', // 19ページ目（元のページ12-1）
-        'CNOT全パターン[プレイヤー黒]', // 20ページ目（元のページ12-2）
-        '終わりに',          // 21ページ目（元のページ13）
+
+    // 指定されたページのみを残す
+    const selectedSlideIds = [
+      'welcome-1', // はじめに
+      'operation-1', // ゲーム概要
+      'piece_types-1', // 駒の種類
+      'gate_about-1', // ゲートについて
+      'gate_x-1', // Xゲート
+      'gate_h-1', // Hゲート
+      'gate_z-1', // Zゲート
+      'gate_y-1', // Yゲート
+      'gate_swap-1', // SWAPゲート
+      'gate_cnot_1-1', // CNOTゲート
+      'gate_mastery_complete-1', // ゲート習得完了
     ];
-    
-    // すべてのスライドを独立したページに変換
-    final flatPages = <TutorialPage>[];
-    int pageNumber = 1; // ページ0を廃止し、最初をページ1とする
-    
-    for (int originalPageIndex = 0; originalPageIndex < originalPages.length; originalPageIndex++) {
-      final originalPage = originalPages[originalPageIndex];
-      for (int slideIndex = 0; slideIndex < originalPage.slides.length; slideIndex++) {
-        final slide = originalPage.slides[slideIndex];
-        final titleIndex = pageNumber - 1; // ページ番号は1から始まるため、-1してインデックスに変換
-        final pageTitle = titleIndex < pageTitles.length 
-            ? pageTitles[titleIndex]
-            : slide.slideTitle ?? originalPage.pageTitle;
-        
-        flatPages.add(
-          TutorialPage(
-            pageNumber: pageNumber++,
-            pageId: slide.slideId,
-            pageTitle: pageTitle,
-            slides: [slide], // 各スライドを1つのページとして扱う
-          ),
-        );
+    const selectedTitles = [
+      'はじめに',
+      'ゲーム概要',
+      '駒の種類',
+      'ゲートについて',
+      'Xゲート',
+      'Hゲート',
+      'Zゲート',
+      'Yゲート',
+      'SWAPゲート',
+      'CNOTゲート',
+      'ゲート習得完了',
+    ];
+
+    final slideById = <String, TutorialSlide>{};
+    for (final page in originalPages) {
+      for (final slide in page.slides) {
+        slideById[slide.slideId] = slide;
       }
     }
-    
-    return flatPages;
+
+    final selectedPages = <TutorialPage>[];
+    for (int i = 0; i < selectedSlideIds.length; i++) {
+      final slideId = selectedSlideIds[i];
+      final slide = slideById[slideId];
+      if (slide == null) {
+        throw StateError('指定スライドが見つかりません: $slideId');
+      }
+      selectedPages.add(
+        TutorialPage(
+          pageNumber: i + 1,
+          pageId: slideId,
+          pageTitle: selectedTitles[i],
+          slides: [slide],
+        ),
+      );
+    }
+
+    return selectedPages;
   }
 
   /// 元のチュートリアルページリスト（スライド分割あり）
@@ -226,7 +227,7 @@ class TutorialService {
           TutorialSlide(
             slideId: 'operation-1',
             texts: [
-              '8x8の盤面のそれぞれのマスにある駒を量子コンピュータのビットとして、その盤面の縦横1列/正方4マスに対して量子コンピュータの演算をかけていくゲームです。',
+              '8x8の盤面のそれぞれのマスにある駒を量子コンピュータの最小単位(量子ビット)として、その盤面の縦横1列、もしくは正方4マスに対して量子コンピュータの演算(量子ゲート)をかけていくゲームです。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.animation,
@@ -315,32 +316,30 @@ class TutorialService {
         ],
       ),
 
-      // ページ4: ゲートとは？
+      // ページ4: 駒の種類 / ゲートについて
       const TutorialPage(
         pageNumber: 4,
-        pageId: 'gate_intro',
-        pageTitle: 'ゲートとは？',
+        pageId: 'piece_and_gate_intro',
+        pageTitle: '駒の種類 / ゲートについて',
         slides: [
           TutorialSlide(
-            slideId: 'gate_intro-1',
+            slideId: 'piece_types-1',
             texts: [
-              '次に、ゲートと呼ばれるコンピュータへの演算操作を説明します。',
-              '従来のコンピュータでは、1つのビットを反転させる(NOTゲート)、2つのビットがどちらも1であれば1になる(ANDゲート)、2つのビットのどちらかが1であれば1になる(ORゲート)といった、1ビットや2ビットに作用させるゲートを使って、計算処理を実行しています。',
+              'このゲームでは、普通のリバーシと同じ白と黒だけでなく、その中間の状態を表すグレープラス、グレーマイナスという駒があります。グレーの駒は、対戦終了時に50%の確率で白か黒になります。',
             ],
             visualElement: TutorialVisualElement(
-              type: VisualElementType.image,
-              data: {'path': 'assets/gateExample.png'},
+              type: VisualElementType.diagram,
+              data: {'type': 'piece_kinds'},
             ),
           ),
           TutorialSlide(
-            slideId: 'gate_intro-2',
+            slideId: 'gate_about-1',
             texts: [
-              '量子コンピュータにも、量子ゲートと呼ばれる、量子ビットに作用させる演算操作があります。',
-              'このゲームでは、代表的な量子ゲートを使用します。',
+              'このゲームでは、駒を挟んでひっくり返す代わりに、量子コンピュータの演算である"ゲート"を駒に適用して別の種類の駒に変化させます。以下の6つのゲートを用います。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
-              data: {'path': 'assets/QC_Gate.png'},
+              data: {'path': 'assets/GateKinds.png'},
             ),
           ),
         ],
@@ -375,8 +374,7 @@ class TutorialService {
           TutorialSlide(
             slideId: 'gate_h-1',
             texts: [
-              '1つのビットに作用し、白または黒とグレーを入れ替えます。',
-              'グレーの状態にも種類があり、Hゲートで白と反転する駒をグレープラス、黒と反転する駒をグレーマイナスとしています。',
+              '1つのビットに作用し、白とグレープラス、黒とグレーマイナスを入れ替えます。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
@@ -395,7 +393,7 @@ class TutorialService {
           TutorialSlide(
             slideId: 'gate_z-1',
             texts: [
-              '1つのビットに作用し、グレープラスとグレーマイナスを反転させます。',
+              '1つのビットに作用し、グレープラスとグレーマイナスを入れ替えます。',
               '白と黒には作用しません。',
             ],
             visualElement: TutorialVisualElement(
@@ -467,14 +465,13 @@ class TutorialService {
       const TutorialPage(
         pageNumber: 10,
         pageId: 'gate_mastery_complete',
-        pageTitle: 'ゲート習得完了',
+        pageTitle: 'チュートリアル完了',
         slides: [
           TutorialSlide(
             slideId: 'gate_mastery_complete-1',
             texts: [
-              'ここまでで基本のゲートの習得は完了です。',
-              'この先は発展的な内容なので、今は覚えなくても大丈夫です。下のホームへボタンをタップして、まずはチャレンジモードから、楽しく量子コンピュータのゲート操作に触れてみてください。',
-              '興味がある方は、ぜひ次の発展的な内容にも目を通してから遊んでみてください。',
+              'チュートリアルはこれで完了です。',
+              'チャレンジモード、VSモード、そしてスタディモードを通じて、楽しく量子コンピュータの計算の世界に触れてみてください。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
@@ -564,7 +561,7 @@ class TutorialService {
             slideId: 'finish-1',
             texts: [
               '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、圧倒的な速度の計算ができるようになるのです。',
-              'このチュートリアルはいつでも見返して、チャレンジモード、VSモードでゲート操作に慣れて、スタディモードで量子コンピュータの計算が早いと言われる一端を感じてみてください...!',
+              'スタディモードの次のステップに進んで、量子コンピュータのさらなる理解と量子アルゴリズムの一端を感じてみてください...!',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.board,

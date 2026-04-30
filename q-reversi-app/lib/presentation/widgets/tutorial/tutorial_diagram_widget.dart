@@ -23,6 +23,8 @@ class TutorialDiagramWidget extends StatelessWidget {
         return _buildMeasurementDiagram();
       case 'gray_piece_equals_video':
         return _buildGrayPieceEqualsVideo();
+      case 'piece_kinds':
+        return _buildPieceKindsDiagram();
       default:
         return Container(
           height: 200,
@@ -198,7 +200,7 @@ class TutorialDiagramWidget extends StatelessWidget {
                 spacing: spacing,
               ),
               
-              SizedBox(height: minGap), // 最小限の隙間のみ
+              const SizedBox(height: minGap), // 最小限の隙間のみ
               
               // パターン2: グレー → 測定 → 黒
               _buildMeasurementFlow(
@@ -490,6 +492,196 @@ class TutorialDiagramWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _buildPieceKindsDiagram() {
+    final variant = data?['variant'] as String?;
+    final braKet = variant == 'bra_ket';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 左右 padding 8×2
+        final innerW = (constraints.maxWidth - 16).clamp(0.0, double.infinity);
+        final horizontalGap = braKet
+            ? (innerW * 0.03).clamp(6.0, 16.0)
+            : (constraints.maxWidth * 0.04).clamp(12.0, 28.0);
+        final verticalGap = (constraints.maxWidth * 0.05).clamp(16.0, 28.0);
+        final labelFontSize = braKet
+            ? (innerW < 320 ? 11.5 : (innerW < 380 ? 13.0 : 14.5))
+            : 16.0;
+        final pieceSize = braKet
+            ? (((innerW - horizontalGap) / 2 * 0.42) * 2.0).clamp(72.0, 104.0)
+            : 52.0;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildPieceKindsPair(
+                leftLabel: braKet ? '白 |\u20600\u2060⟩：' : '白：',
+                leftType: PieceType.white,
+                rightLabel: braKet ? '黒 |\u20601\u2060⟩：' : '黒：',
+                rightType: PieceType.black,
+                horizontalGap: horizontalGap,
+                labelFontSize: labelFontSize,
+                pieceSize: pieceSize,
+              ),
+              SizedBox(height: verticalGap),
+              _buildPieceKindsPair(
+                leftLabel: braKet ? 'グレープラス |\u2060+\u2060⟩：' : 'グレープラス：',
+                leftType: PieceType.grayPlus,
+                rightLabel: braKet ? 'グレーマイナス |\u2060-\u2060⟩：' : 'グレーマイナス：',
+                rightType: PieceType.grayMinus,
+                horizontalGap: horizontalGap,
+                labelFontSize: labelFontSize,
+                pieceSize: pieceSize,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPieceKindsPair({
+    required String leftLabel,
+    required PieceType leftType,
+    required String rightLabel,
+    required PieceType rightType,
+    required double horizontalGap,
+    double labelFontSize = 16,
+    double pieceSize = 52,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _buildPieceKindCell(
+            leftLabel,
+            leftType,
+            labelFontSize: labelFontSize,
+            pieceSize: pieceSize,
+          ),
+        ),
+        SizedBox(width: horizontalGap),
+        Expanded(
+          child: _buildPieceKindCell(
+            rightLabel,
+            rightType,
+            labelFontSize: labelFontSize,
+            pieceSize: pieceSize,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPieceKindCell(
+    String label,
+    PieceType type, {
+    double labelFontSize = 16,
+    double pieceSize = 52,
+  }) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: labelFontSize,
+                fontWeight: FontWeight.w600,
+                height: 1.25,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              softWrap: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildLabeledPiece(type, pieceSize),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabeledPiece(PieceType type, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFF4CAF50),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: const Color(0xFF2E7D32),
+          width: 2,
+        ),
+      ),
+      child: Center(
+        child: Container(
+          width: size * 0.7,
+          height: size * 0.7,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: _pieceColorFor(type),
+            border: Border.all(
+              color: Colors.grey.shade700,
+              width: 1,
+            ),
+          ),
+          child: _pieceMarkFor(type, size),
+        ),
+      ),
+    );
+  }
+
+  Color _pieceColorFor(PieceType type) {
+    switch (type) {
+      case PieceType.white:
+        return Colors.white;
+      case PieceType.black:
+        return Colors.black;
+      case PieceType.grayPlus:
+      case PieceType.grayMinus:
+      case PieceType.grayNeutral:
+        return Colors.grey.shade600;
+      case PieceType.blackWhite:
+        return Colors.grey.shade800;
+      case PieceType.whiteBlack:
+        return Colors.grey.shade300;
+    }
+  }
+
+  Widget? _pieceMarkFor(PieceType type, double size) {
+    if (type == PieceType.grayPlus) {
+      return Center(
+        child: Text(
+          '+',
+          style: TextStyle(
+            fontSize: size * 0.45,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+    if (type == PieceType.grayMinus) {
+      return Center(
+        child: Text(
+          '−',
+          style: TextStyle(
+            fontSize: size * 0.45,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+      );
+    }
+    return null;
   }
 }
 

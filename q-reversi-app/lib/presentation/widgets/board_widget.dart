@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/board.dart';
+import '../../domain/entities/piece.dart';
 import '../../domain/entities/position.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/forbidden_area.dart';
 import 'piece_widget.dart';
+
+/// 盤面セルの駒表示を差し替えるとき用（スタディ画面など）
+typedef BoardPieceBuilder = Widget Function(
+  Piece piece,
+  double size, {
+  required bool isSelected,
+  required bool isHighlighted,
+});
 
 /// ボードウィジェット
 class BoardWidget extends StatelessWidget {
@@ -15,13 +24,17 @@ class BoardWidget extends StatelessWidget {
   final Function(int, String)? onRowSelected; // String: 'left' or 'right'
   final Function(int, String)? onColumnSelected; // String: 'top' or 'bottom'
   final bool enableRowColumnButtons;
+  /// `false` のとき、列選択ボタン（盤の上下）のみ非表示。行選択（左右）はそのまま。
+  final bool showColumnButtons;
   final GateType? selectedGate;
   final Map<int, bool>? selectedRows;
   final Map<int, bool>? selectedColumns;
   final List<ForbiddenArea>? forbiddenAreas; // 禁止領域のリスト
   final double cellSize;
   final Map<String, GlobalKey>? customKeys; // カスタムキー（列選択ボタン、行選択ボタン、盤面セル用）
-  
+  /// 指定時は [PieceWidget] の代わりに駒を描画する
+  final BoardPieceBuilder? pieceBuilder;
+
   const BoardWidget({
     super.key,
     required this.board,
@@ -32,12 +45,14 @@ class BoardWidget extends StatelessWidget {
     this.onRowSelected,
     this.onColumnSelected,
     this.enableRowColumnButtons = false,
+    this.showColumnButtons = true,
     this.selectedGate,
     this.selectedRows,
     this.selectedColumns,
     this.forbiddenAreas,
     this.cellSize = 50,
     this.customKeys,
+    this.pieceBuilder,
   });
   
   /// 行が禁止領域かどうか（1ビットゲート選択時のみ）
@@ -93,75 +108,80 @@ class BoardWidget extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 列選択ボタン（上側）
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(width: 40 + 4), // 行ボタンの幅分のスペース
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(board.cols, (col) {
-                  final isSelected = selectedColumns?[col] ?? false;
-                  final isForbidden = _isColumnForbidden(col);
-                  // 禁止領域の列ボタンは非表示
-                  if (isForbidden) {
+          if (showColumnButtons) ...[
+            // 列選択ボタン（上側）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 40 + 4), // 行ボタンの幅分のスペース
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(board.cols, (col) {
+                    final isSelected = selectedColumns?[col] ?? false;
+                    final isForbidden = _isColumnForbidden(col);
+                    // 禁止領域の列ボタンは非表示
+                    if (isForbidden) {
+                      return Container(
+                        width: cellSize,
+                        height: 40,
+                        margin: const EdgeInsets.all(2),
+                      );
+                    }
+                    final columnTopKey = customKeys?['column_top_$col'];
                     return Container(
                       width: cellSize,
                       height: 40,
                       margin: const EdgeInsets.all(2),
-                    );
-                  }
-                  final columnTopKey = customKeys?['column_top_$col'];
-                  return Container(
-                    width: cellSize,
-                    height: 40,
-                    margin: const EdgeInsets.all(2),
                       child: ElevatedButton(
-                      key: columnTopKey,
-                      onPressed: enableRowColumnButtons &&
-                              (selectedGate == null || selectedGate!.isOneBitGate) &&
-                              !isForbidden
-                          ? () => onColumnSelected?.call(col, 'top')
-                          : null,
-                      style: ButtonStyle(
-                        padding: WidgetStateProperty.all(EdgeInsets.zero),
-                        backgroundColor: WidgetStateProperty.all(
-                          (selectedGate != null && selectedGate!.isTwoBitGate)
-                              ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                              : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                        ),
-                        foregroundColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.disabled)) {
-                            return const Color(0xFF8B4513).withOpacity(0.5);
-                          }
-                          return isSelected
-                              ? Colors.white
-                              : const Color(0xFF8B4513);
-                        }),
-                        shape: WidgetStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            side: BorderSide(
-                              color: (selectedGate != null && selectedGate!.isTwoBitGate)
-                                  ? Colors.white
-                                  : (isSelected
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFF8B4513)),
-                              width: 2,
+                        key: columnTopKey,
+                        onPressed: enableRowColumnButtons &&
+                                (selectedGate == null ||
+                                    selectedGate!.isOneBitGate) &&
+                                !isForbidden
+                            ? () => onColumnSelected?.call(col, 'top')
+                            : null,
+                        style: ButtonStyle(
+                          padding: WidgetStateProperty.all(EdgeInsets.zero),
+                          backgroundColor: WidgetStateProperty.all(
+                            (selectedGate != null && selectedGate!.isTwoBitGate)
+                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
+                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
+                          ),
+                          foregroundColor:
+                              WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.disabled)) {
+                              return const Color(0xFF8B4513).withOpacity(0.5);
+                            }
+                            return isSelected
+                                ? Colors.white
+                                : const Color(0xFF8B4513);
+                          }),
+                          shape: WidgetStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              side: BorderSide(
+                                color: (selectedGate != null &&
+                                        selectedGate!.isTwoBitGate)
+                                    ? Colors.white
+                                    : (isSelected
+                                        ? const Color(0xFF4CAF50)
+                                        : const Color(0xFF8B4513)),
+                                width: 2,
+                              ),
                             ),
                           ),
+                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
                         ),
-                        elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        child: const SizedBox.shrink(),
                       ),
-                      child: const SizedBox.shrink(),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(width: 40 + 4), // 右側行ボタンの幅分のスペース
-            ],
-          ),
-          const SizedBox(height: 4),
+                    );
+                  }),
+                ),
+                const SizedBox(width: 40 + 4), // 右側行ボタンの幅分のスペース
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
           // 行選択ボタンとボード本体
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,12 +330,19 @@ class BoardWidget extends StatelessWidget {
                           child: piece != null
                               ? Opacity(
                                   opacity: isForbidden ? 0.5 : 1.0, // 禁止領域は半透明
-                                  child: PieceWidget(
-                                    piece: piece,
-                                    isSelected: isSelected,
-                                    isHighlighted: isHighlighted,
-                                    size: cellSize - 8,
-                                  ),
+                                  child: pieceBuilder != null
+                                      ? pieceBuilder!(
+                                          piece,
+                                          cellSize - 8,
+                                          isSelected: isSelected,
+                                          isHighlighted: isHighlighted,
+                                        )
+                                      : PieceWidget(
+                                          piece: piece,
+                                          isSelected: isSelected,
+                                          isHighlighted: isHighlighted,
+                                          size: cellSize - 8,
+                                        ),
                                 )
                               : null,
                         ),
@@ -386,73 +413,78 @@ class BoardWidget extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          // 列選択ボタン（下側）
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(width: 40 + 4), // 行ボタンの幅分のスペース
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(board.cols, (col) {
-                  final isSelected = selectedColumns?[col] ?? false;
-                  final isForbidden = _isColumnForbidden(col);
-                  // 禁止領域の列ボタンは非表示
-                  if (isForbidden) {
+          if (showColumnButtons) ...[
+            const SizedBox(height: 4),
+            // 列選択ボタン（下側）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 40 + 4), // 行ボタンの幅分のスペース
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(board.cols, (col) {
+                    final isSelected = selectedColumns?[col] ?? false;
+                    final isForbidden = _isColumnForbidden(col);
+                    // 禁止領域の列ボタンは非表示
+                    if (isForbidden) {
+                      return Container(
+                        width: cellSize,
+                        height: 40,
+                        margin: const EdgeInsets.all(2),
+                      );
+                    }
                     return Container(
                       width: cellSize,
                       height: 40,
                       margin: const EdgeInsets.all(2),
-                    );
-                  }
-                  return Container(
-                    width: cellSize,
-                    height: 40,
-                    margin: const EdgeInsets.all(2),
                       child: ElevatedButton(
-                      onPressed: enableRowColumnButtons &&
-                              (selectedGate == null || selectedGate!.isOneBitGate) &&
-                              !isForbidden
-                          ? () => onColumnSelected?.call(col, 'bottom')
-                          : null,
-                      style: ButtonStyle(
-                        padding: WidgetStateProperty.all(EdgeInsets.zero),
-                        backgroundColor: WidgetStateProperty.all(
-                          (selectedGate != null && selectedGate!.isTwoBitGate)
-                              ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                              : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                        ),
-                        foregroundColor: WidgetStateProperty.resolveWith((states) {
-                          if (states.contains(WidgetState.disabled)) {
-                            return const Color(0xFF8B4513).withOpacity(0.5);
-                          }
-                          return isSelected
-                              ? Colors.white
-                              : const Color(0xFF8B4513);
-                        }),
-                        shape: WidgetStateProperty.all(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            side: BorderSide(
-                              color: (selectedGate != null && selectedGate!.isTwoBitGate)
-                                  ? Colors.white
-                                  : (isSelected
-                                      ? const Color(0xFF4CAF50)
-                                      : const Color(0xFF8B4513)),
-                              width: 2,
+                        onPressed: enableRowColumnButtons &&
+                                (selectedGate == null ||
+                                    selectedGate!.isOneBitGate) &&
+                                !isForbidden
+                            ? () => onColumnSelected?.call(col, 'bottom')
+                            : null,
+                        style: ButtonStyle(
+                          padding: WidgetStateProperty.all(EdgeInsets.zero),
+                          backgroundColor: WidgetStateProperty.all(
+                            (selectedGate != null && selectedGate!.isTwoBitGate)
+                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
+                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
+                          ),
+                          foregroundColor:
+                              WidgetStateProperty.resolveWith((states) {
+                            if (states.contains(WidgetState.disabled)) {
+                              return const Color(0xFF8B4513).withOpacity(0.5);
+                            }
+                            return isSelected
+                                ? Colors.white
+                                : const Color(0xFF8B4513);
+                          }),
+                          shape: WidgetStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              side: BorderSide(
+                                color: (selectedGate != null &&
+                                        selectedGate!.isTwoBitGate)
+                                    ? Colors.white
+                                    : (isSelected
+                                        ? const Color(0xFF4CAF50)
+                                        : const Color(0xFF8B4513)),
+                                width: 2,
+                              ),
                             ),
                           ),
+                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
                         ),
-                        elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        child: const SizedBox.shrink(),
                       ),
-                      child: const SizedBox.shrink(),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(width: 40 + 4), // 右側行ボタンの幅分のスペース
-            ],
-          ),
+                    );
+                  }),
+                ),
+                const SizedBox(width: 40 + 4), // 右側行ボタンの幅分のスペース
+              ],
+            ),
+          ],
         ],
       ),
     );
