@@ -2,7 +2,7 @@
 
 量子ゲート操作で盤面を操る新感覚リバーシ。
 
-**▶ Play:** https://q-jwp-open.github.io/q-reversi-qaz/
+**▶ Play:** https://qtechgaming.github.io/q-reversi/
 
 ## AIレベル
 | レベル | 説明 |
@@ -26,7 +26,7 @@ FourPlyMiniMaxQR アルゴリズムを Dart に移植:
 - n_gray = 重ね合わせ駒数（GRAY_PLUS / GRAY_MINUS）
 - エンタングル駒（WHITE_BLACK / BLACK_WHITE）は寄与ゼロ
 
-Python ベンチマーク (q-reversi-qaz-integration):
+Python ベンチマーク (q-reversi-integration):
 - vs 初級: **100%** (target 95%) ✓
 - vs 中級: **82.5%** (target 80%) ✓
 - vs 上級: **70%** (target 65%) ✓
@@ -43,3 +43,8 @@ flutter run -d chrome
 
 Settings → Pages → Branch: `main` / Folder: `/docs` に設定してください。
 `q-reversi-app/` への変更を push すると自動でビルド・デプロイされます。
+
+## License
+
+This project is licensed under the Apache License 2.0.
+See `LICENSE` for details.

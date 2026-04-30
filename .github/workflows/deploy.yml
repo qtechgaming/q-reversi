@@ -24,7 +24,7 @@ jobs:
 
       - name: Build Flutter web
         working-directory: q-reversi-app
-        run: flutter build web --base-href "/q-reversi-qaz/" --release
+        run: flutter build web --base-href "/q-reversi/" --release
 
       - name: Deploy to docs/
         run: |

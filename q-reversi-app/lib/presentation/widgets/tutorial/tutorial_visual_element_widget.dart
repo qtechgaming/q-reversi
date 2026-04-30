@@ -163,7 +163,6 @@ class _VideoPlayerWidget extends StatefulWidget {
   final String videoPath;
 
   const _VideoPlayerWidget({
-    super.key,
     required this.videoPath,
   });
 

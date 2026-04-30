@@ -1,4 +1,4 @@
-# q-reversi-qaz Privacy Policy
+# q-reversi Privacy Policy
 
 `index.md` は、GitHub Pagesでそのまま公開できる最小構成のプライバシーポリシーです。
 
@@ -28,9 +28,9 @@
 ```bash
 git init
 git add index.md
-git commit -m "Add privacy policy for q-reversi-qaz"
+git commit -m "Add privacy policy for q-reversi"
 git branch -M main
-git remote add origin https://github.com/<your-account>/q-reversi-qaz-privacy-policy.git
+git remote add origin https://github.com/<your-account>/q-reversi-privacy-policy.git
 git push -u origin main
 ```
 
