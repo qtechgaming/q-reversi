@@ -569,8 +569,12 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
                           ),
                         ),
                       ),
-                      child: Column(
-                        children: [
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: Column(
+                              children: [
                           Row(
                             children: [
                               const Spacer(),
@@ -632,51 +636,51 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               GateType.x,
                               GateType.h,
                               GateType.y,
                               GateType.z
                             ].map((gate) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: SizedBox(
-                                  width: 74,
-                                  child: GateButton(
-                                    gate: gate,
-                                    isEnabled: true,
-                                    isSelected: _selectedGate == gate,
-                                    centerTwoBitLabel: true,
-                                    onTap: () => _handleGateSelection(gate),
-                                  ),
+                              return SizedBox(
+                                width: 74,
+                                child: GateButton(
+                                  gate: gate,
+                                  isEnabled: true,
+                                  isSelected: _selectedGate == gate,
+                                  centerTwoBitLabel: true,
+                                  onTap: () => _handleGateSelection(gate),
                                 ),
                               );
                             }).toList(),
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [GateType.cnot, GateType.swap].map((gate) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: SizedBox(
-                                  width: 86,
-                                  child: GateButton(
-                                    gate: gate,
-                                    isEnabled: true,
-                                    isSelected: _selectedGate == gate,
-                                    centerTwoBitLabel: true,
-                                    onTap: () => _handleGateSelection(gate),
-                                  ),
+                              return SizedBox(
+                                width: 86,
+                                child: GateButton(
+                                  gate: gate,
+                                  isEnabled: true,
+                                  isSelected: _selectedGate == gate,
+                                  centerTwoBitLabel: true,
+                                  onTap: () => _handleGateSelection(gate),
                                 ),
                               );
                             }).toList(),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 8,
                             children: [
                               ElevatedButton(
                                 onPressed: _canApplyGate() ? _applyGate : null,
@@ -698,7 +702,6 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
                               ElevatedButton(
                                 onPressed: _resetStudyState,
                                 style: ElevatedButton.styleFrom(
@@ -719,7 +722,10 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
                               ),
                             ],
                           ),
-                        ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

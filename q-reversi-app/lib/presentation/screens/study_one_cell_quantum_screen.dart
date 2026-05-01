@@ -588,8 +588,12 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
                           ),
                         ),
                       ),
-                      child: Column(
-                        children: [
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                            child: Column(
+                              children: [
                           Row(
                             children: [
                               const Spacer(),
@@ -638,22 +642,21 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
                             ),
                           ),
                           const SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: _oneBitGates.map((gate) {
                               final isSelected = _selectedGate == gate;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: SizedBox(
-                                  width: 60,
-                                  child: GateButton(
-                                    gate: gate,
-                                    isEnabled: !_isAnimating,
-                                    isSelected: isSelected,
-                                    onTap: () {
-                                      _onSelectGate(gate);
-                                    },
-                                  ),
+                              return SizedBox(
+                                width: 60,
+                                child: GateButton(
+                                  gate: gate,
+                                  isEnabled: !_isAnimating,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    _onSelectGate(gate);
+                                  },
                                 ),
                               );
                             }).toList(),
@@ -682,7 +685,10 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
                               ),
                             ),
                           ),
-                        ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),

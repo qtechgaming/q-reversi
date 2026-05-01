@@ -137,30 +137,33 @@ class _StudyQuantumIntroScreenState extends State<StudyQuantumIntroScreen> {
   Widget _buildSlide(TutorialSlide slide) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Container(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ...slide.texts.map((text) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      text,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        height: 1.6,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ...slide.texts.map((text) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        text,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.6,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  )),
-              const SizedBox(height: 16),
-              if (slide.visualElement != null)
-                Expanded(
-                  child: _buildVisualElement(slide.visualElement!),
-                ),
-            ],
+                    )),
+                const SizedBox(height: 16),
+                if (slide.visualElement != null)
+                  SizedBox(
+                    height: constraints.maxHeight * 0.62,
+                    child: _buildVisualElement(slide.visualElement!),
+                  ),
+              ],
+            ),
           ),
         );
       },
