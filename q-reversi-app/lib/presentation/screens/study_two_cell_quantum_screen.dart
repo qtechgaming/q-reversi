@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../core/quantum/qcomplex.dart';
+import '../../core/quantum/study_quantum_gauge.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/piece.dart';
@@ -13,7 +15,7 @@ import '../../domain/services/study_text_progress_service.dart';
 
 /// スタディ「2マスで学ぶ量子コンピュータ」専用の駒表示。
 ///
-/// 状態ベクトルは [|00⟩,|01⟩,|10⟩,|11⟩] の**実数**振幅（未正規化でも可）。
+/// 状態ベクトルは [|00⟩,|01⟩,|10⟩,|11⟩] の複素振幅（未正規化でも可）。
 ///
 /// - **Bell 4状態**への忠実度が十分高いとき
 ///   - \|Φ±⟩ 系（\|00⟩,\|11⟩ 成分が支配的）→ 両マス [PieceType.blackWhite]
@@ -29,18 +31,18 @@ class StudyTwoCellPieceDisplay {
   static const double _p1Edge = 0.05;
   static const double _xThresh = 0.07;
 
-  static StudyTwoCellPieces fromAmplitudes(List<double> amplitudes) {
+  static StudyTwoCellPieces fromAmplitudes(List<QComplex> amplitudes) {
     final v = _normalize4(amplitudes);
     final a = v[0];
     final b = v[1];
     final c = v[2];
     final d = v[3];
 
-    // F_i = |⟨Bell_i|ψ⟩|²（実数振幅・正規化 |ψ⟩=1）
-    final fPhiPlus = 0.5 * (a + d) * (a + d);
-    final fPhiMinus = 0.5 * (a - d) * (a - d);
-    final fPsiPlus = 0.5 * (b + c) * (b + c);
-    final fPsiMinus = 0.5 * (b - c) * (b - c);
+    // F_i = |⟨Bell_i|ψ⟩|²（正規化 |ψ⟩=1）
+    final fPhiPlus = 0.5 * (a + d).normSquared();
+    final fPhiMinus = 0.5 * (a - d).normSquared();
+    final fPsiPlus = 0.5 * (b + c).normSquared();
+    final fPsiMinus = 0.5 * (b - c).normSquared();
 
     final bellPhi = math.max(fPhiPlus, fPhiMinus);
     final bellPsi = math.max(fPsiPlus, fPsiMinus);
@@ -54,10 +56,12 @@ class StudyTwoCellPieceDisplay {
 
     final slater = (a * d - b * c).abs();
     if (slater <= _slaterProductTol) {
-      final p1Left = c * c + d * d;
-      final xLeft = 2 * (a * c + b * d);
-      final p1Right = b * b + d * d;
-      final xRight = 2 * (a * b + c * d);
+      final p1Left = c.normSquared() + d.normSquared();
+      final zLeft = a.conj() * c + b.conj() * d;
+      final xLeft = 2 * zLeft.re;
+      final p1Right = b.normSquared() + d.normSquared();
+      final zRight = a.conj() * b + c.conj() * d;
+      final xRight = 2 * zRight.re;
       return StudyTwoCellPieces(
         left: _singleQubitVisual(p1: p1Left, xExp: xLeft),
         right: _singleQubitVisual(p1: p1Right, xExp: xRight),
@@ -81,12 +85,14 @@ class StudyTwoCellPieceDisplay {
     return PieceType.grayNeutral;
   }
 
-  static List<double> _normalize4(List<double> a) {
-    final n = math.sqrt(a.fold<double>(0, (s, v) => s + v * v));
+  static List<QComplex> _normalize4(List<QComplex> a) {
+    final n = math.sqrt(
+      a.fold<double>(0, (s, v) => s + v.normSquared()),
+    );
     if (n == 0) {
-      return [1, 0, 0, 0];
+      return [QComplex.one, QComplex.zero, QComplex.zero, QComplex.zero];
     }
-    return a.map((v) => v / n).toList();
+    return a.map((v) => v.scaled(1 / n)).toList();
   }
 }
 
@@ -112,8 +118,13 @@ class StudyTwoCellQuantumScreen extends StatefulWidget {
 class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
   static const List<String> _basisLabels = ['|00⟩', '|01⟩', '|10⟩', '|11⟩'];
 
-  // 実数振幅での簡易2量子ビット状態ベクトル（順序: |00⟩, |01⟩, |10⟩, |11⟩）
-  List<double> _amplitudes = [1, 0, 0, 0];
+  // 複素振幅の2量子ビット状態ベクトル（順序: |00⟩, |01⟩, |10⟩, |11⟩）
+  List<QComplex> _amplitudes = [
+    QComplex.one,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+  ];
   GateType? _selectedGate;
 
   List<Position> _selectedPositions = [];
@@ -150,8 +161,9 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
     _showTutorialOnFirstVisit();
   }
 
-  List<double> get _probabilities =>
-      _amplitudes.map((a) => (a * a).clamp(0, 1).toDouble()).toList();
+  List<double> get _probabilities => _amplitudes
+      .map((a) => a.normSquared().clamp(0, 1).toDouble())
+      .toList();
 
   Future<void> _showTutorialOnFirstVisit() async {
     final seen = await StudyTextProgressService.hasSeen('study2');
@@ -354,7 +366,7 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
     final targets = _resolveTargetPositions(board);
     if (targets == null || targets.isEmpty) return;
 
-    final next = List<double>.from(_amplitudes);
+    final next = List<QComplex>.from(_amplitudes);
 
     if (gate.isOneBitGate) {
       final matrix = _matrixForOneBitGate(gate);
@@ -383,43 +395,52 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
     });
   }
 
-  List<double> _normalize(List<double> values) {
-    final norm = math.sqrt(values.fold<double>(0, (sum, v) => sum + v * v));
+  List<QComplex> _normalize(List<QComplex> values) {
+    final norm = math.sqrt(
+      values.fold<double>(0, (sum, v) => sum + v.normSquared()),
+    );
     if (norm == 0) {
-      return [1, 0, 0, 0];
+      return [
+        QComplex.one,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+      ];
     }
-    return values.map((v) => v / norm).toList();
+    final inv = 1 / norm;
+    return values.map((v) => v.scaled(inv)).toList();
   }
 
-  static const List<List<double>> _xMatrix = [
-    [0, 1],
-    [1, 0],
+  static const List<List<QComplex>> _xMatrix = [
+    [QComplex.zero, QComplex.one],
+    [QComplex.one, QComplex.zero],
   ];
 
-  static const List<List<double>> _zMatrix = [
-    [1, 0],
-    [0, -1],
+  static const List<List<QComplex>> _zMatrix = [
+    [QComplex.one, QComplex.zero],
+    [QComplex.zero, QComplex(-1, 0)],
   ];
 
-  static const List<List<double>> _yRealMatrix = [
-    [0, -1],
-    [1, 0],
+  /// Pauli-Y（虚数成分あり）
+  static const List<List<QComplex>> _yMatrix = [
+    [QComplex.zero, QComplex(0, -1)],
+    [QComplex(0, 1), QComplex.zero],
   ];
 
   static const double _invSqrt2 = 0.7071067811865475;
-  static const List<List<double>> _hMatrix = [
-    [_invSqrt2, _invSqrt2],
-    [_invSqrt2, -_invSqrt2],
+  static final List<List<QComplex>> _hMatrix = [
+    [QComplex.real(_invSqrt2), QComplex.real(_invSqrt2)],
+    [QComplex.real(_invSqrt2), QComplex.real(-_invSqrt2)],
   ];
 
-  List<List<double>>? _matrixForOneBitGate(GateType gate) {
+  List<List<QComplex>>? _matrixForOneBitGate(GateType gate) {
     switch (gate) {
       case GateType.x:
         return _xMatrix;
       case GateType.h:
         return _hMatrix;
       case GateType.y:
-        return _yRealMatrix;
+        return _yMatrix;
       case GateType.z:
         return _zMatrix;
       default:
@@ -428,9 +449,9 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
   }
 
   void _applySingleQubit(
-    List<double> state,
+    List<QComplex> state,
     int targetQubit,
-    List<List<double>> matrix,
+    List<List<QComplex>> matrix,
   ) {
     final mask = targetQubit == 0 ? 2 : 1;
     for (int i = 0; i < 4; i++) {
@@ -443,7 +464,7 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
     }
   }
 
-  void _applyCnot(List<double> state, {required int control}) {
+  void _applyCnot(List<QComplex> state, {required int control}) {
     final controlMask = control == 0 ? 2 : 1;
     final targetMask = control == 0 ? 1 : 2;
 
@@ -457,7 +478,7 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
     }
   }
 
-  void _applySwap(List<double> state) {
+  void _applySwap(List<QComplex> state) {
     final temp = state[1];
     state[1] = state[2];
     state[2] = temp;
@@ -465,7 +486,12 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
 
   void _resetStudyState() {
     setState(() {
-      _amplitudes = [1, 0, 0, 0];
+      _amplitudes = [
+        QComplex.one,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+      ];
       _selectedGate = null;
       _selectedPositions = [];
       _selectedRow = null;
@@ -488,6 +514,8 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
   @override
   Widget build(BuildContext context) {
     final probs = _probabilities;
+    final gaugeAmp = globalPhaseGaugeFirstPositive(_amplitudes);
+    final amps = gaugeAmp.map((z) => z.re).toList();
     final board = _displayBoard;
 
     final step = _tutorialStepIndex == null ? null : _tutorialSteps[_tutorialStepIndex!];
@@ -526,7 +554,7 @@ class _StudyTwoCellQuantumScreenState extends State<StudyTwoCellQuantumScreen> {
                             child: StudyQuantumGraphCard(
                               title: '確率振幅（-1 ～ 1）',
                               child: StudyQuantumStateBarChart(
-                                values: _amplitudes,
+                                values: amps,
                                 labels: _basisLabels,
                                 minY: -1,
                                 maxY: 1,

@@ -84,6 +84,31 @@ class _StudyTextTutorialOverlayState extends State<StudyTextTutorialOverlay> {
     return offset & renderObject.size;
   }
 
+  TextSpan _buildMessageSpan(String message) {
+    const normal = TextStyle(
+      color: Colors.white,
+      fontSize: 15,
+      height: 1.5,
+    );
+    const note = TextStyle(
+      color: Colors.white70,
+      fontSize: 12,
+      height: 1.4,
+    );
+
+    final lines = message.split('\n');
+    final spans = <InlineSpan>[];
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final isNote = line.trimLeft().startsWith('※');
+      spans.add(TextSpan(text: line, style: isNote ? note : normal));
+      if (i < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n', style: normal));
+      }
+    }
+    return TextSpan(children: spans);
+  }
+
   Widget _buildBubble() {
     return Container(
       key: _bubbleMeasureKey,
@@ -107,13 +132,8 @@ class _StudyTextTutorialOverlayState extends State<StudyTextTutorialOverlay> {
             ),
             const SizedBox(height: 6),
           ],
-          Text(
-            widget.step.message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.5,
-            ),
+          RichText(
+            text: _buildMessageSpan(widget.step.message),
           ),
           const SizedBox(height: 8),
           Row(

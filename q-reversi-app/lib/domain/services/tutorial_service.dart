@@ -355,7 +355,7 @@ class TutorialService {
             slideId: 'gate_x-1',
             texts: [
               '1つのビットに作用し、白と黒を入れ替えます。',
-              'グレーには作用しません。',
+              'グレー駒は変化させません。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
@@ -394,7 +394,7 @@ class TutorialService {
             slideId: 'gate_z-1',
             texts: [
               '1つのビットに作用し、グレープラスとグレーマイナスを入れ替えます。',
-              '白と黒には作用しません。',
+              '白と黒は変化させません。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
@@ -560,8 +560,8 @@ class TutorialService {
           TutorialSlide(
             slideId: 'finish-1',
             texts: [
-              '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、圧倒的な速度の計算ができるようになるのです。',
-              'スタディモードの次のステップに進んで、量子コンピュータのさらなる理解と量子アルゴリズムの一端を感じてみてください...!',
+              '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、高速な計算が可能になるのです。',
+              'スタディモードの次のステップに進んで、量子コンピュータと量子アルゴリズムの一端を感じてみてください...!',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.board,

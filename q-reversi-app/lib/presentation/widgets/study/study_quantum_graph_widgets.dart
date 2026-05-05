@@ -164,14 +164,6 @@ class _StudyQuantumStateBarChartPainter extends CustomPainter {
     final section = rect.width / count;
     final barWidth = section * 0.52;
     final radius = Radius.circular(math.min(4, barWidth * 0.2));
-    final gradient = LinearGradient(
-      begin: Alignment.bottomCenter,
-      end: Alignment.topCenter,
-      colors: [
-        barColor.withValues(alpha: 0.7),
-        barColor,
-      ],
-    );
 
     for (int i = 0; i < count; i++) {
       final v = values[i].clamp(minY, maxY);
@@ -183,6 +175,15 @@ class _StudyQuantumStateBarChartPainter extends CustomPainter {
       final top = math.min(y0, yV);
       final bottom = math.max(y0, yV);
       final barRect = Rect.fromLTRB(xLeft, top, xRight, bottom);
+
+      final gradient = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [
+          barColor.withValues(alpha: 0.72),
+          barColor,
+        ],
+      );
 
       final p = Paint()
         ..shader = gradient.createShader(barRect)

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_constants.dart';
+import '../../core/quantum/qcomplex.dart';
+import '../../core/quantum/study_quantum_gauge.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/piece.dart';
@@ -65,13 +67,13 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   ];
 
   static const double _invSqrt2 = 0.7071067811865475;
-  static const List<List<double>> _hMatrix = [
-    [_invSqrt2, _invSqrt2],
-    [_invSqrt2, -_invSqrt2],
+  static final List<List<QComplex>> _hMatrix = [
+    [QComplex.real(_invSqrt2), QComplex.real(_invSqrt2)],
+    [QComplex.real(_invSqrt2), QComplex.real(-_invSqrt2)],
   ];
-  static const List<List<double>> _xMatrix = [
-    [0, 1],
-    [1, 0],
+  static const List<List<QComplex>> _xMatrix = [
+    [QComplex.zero, QComplex.one],
+    [QComplex.one, QComplex.zero],
   ];
 
   static const double _p1Edge = 0.05;
@@ -79,11 +81,18 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   static const double _superpositionCenterTol = 0.1;
   static const double _pureStateTol = 0.9;
 
-  List<double> _amplitudes = [1, 0, 0, 0, 0, 0, 0, 0];
+  List<QComplex> _amplitudes = [
+    QComplex.one,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+    QComplex.zero,
+  ];
   _Study3Gate? _selectedGate;
   List<Position> _selectedPositions = [];
-  int? _selectedRow;
-  String? _selectedRowDirection;
 
   int _stepIndex = 0;
   final Set<int> _currentStepAppliedQubits = <int>{};
@@ -155,7 +164,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     StudyTextTutorialStep(
       title: 'アルゴリズム1回分適用完了',
       message:
-          'グローバーのアルゴリズムを1回適用しました。この時点で、|111⟩の存在確率が78%まで上がっています。もう一周アルゴリズムを適用して、取り出したい状態の存在確率をさらに上げていきましょう。',
+          'グローバーのアルゴリズムを1回適用しました。この時点で、|111⟩の存在確率が78%まで上がっています。もう1周アルゴリズムを適用すると、取り出したい状態の存在確率が最大化します。続けて、アルゴリズムを適用しましょう。',
     ),
     StudyTextTutorialStep(
       title: 'アルゴリズム2周完了',
@@ -170,7 +179,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     StudyTextTutorialStep(
       title: 'グローバーのアルゴリズム',
       message:
-          '今回は、3ビットかつ目標状態を指定して、グローバーのアルゴリズムを体験しました。ビット数を増やし、目標状態に印をつける回路を設計すれば、より多くの候補の中から目的の状態を効率よく見つけられます。\n「なぜ速く探せるのか」が気になった方は、ぜひこの先も学んでみてください。',
+          '今回は、3ビットかつ目標状態を指定して、グローバーのアルゴリズムを体験しました。ビット数を増やし、目標状態に印をつける回路を設計すれば、より多くの候補の中から目的の状態を効率よく見つけられます。\n「なぜ速く探せるのか」が気になった方は、ぜひ調べて学んでみてください。',
       nextLabel: '完了',
     ),
   ];
@@ -188,8 +197,9 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     super.dispose();
   }
 
-  List<double> get _probabilities =>
-      _amplitudes.map((a) => (a * a).clamp(0, 1).toDouble()).toList();
+  List<double> get _probabilities => _amplitudes
+      .map((a) => a.normSquared().clamp(0, 1).toDouble())
+      .toList();
 
   Future<void> _showTutorialOnFirstVisit() async {
     final seen = await StudyTextProgressService.hasSeen('study3');
@@ -334,11 +344,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     if (_selectedGate == null || _sequenceFailed || _measured || _sequenceCompleted) {
       return false;
     }
-    if (_selectedGate == _Study3Gate.ccz) {
-      return _selectedPositions.length == 3;
-    }
-    if (_selectedRow != null) return true;
-    return _selectedPositions.isNotEmpty;
+    return _selectedPositions.length == 3;
   }
 
   String _gateLabel(_Study3Gate gate) {
@@ -368,54 +374,18 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
 
   void _selectGate(_Study3Gate gate) {
     if (_sequenceFailed || _measured || _sequenceCompleted) return;
+    final board = _displayBoard;
+    final all = List<Position>.generate(board.cols, (c) => Position(0, c));
     setState(() {
-      final previous = _selectedGate;
       _selectedGate = gate;
       _message = null;
-
-      if (gate == _Study3Gate.ccz) {
-        _selectedPositions = [];
-        _selectedRow = null;
-        _selectedRowDirection = null;
-      } else {
-        // H/X: CCZ から切り替えたときだけ盤面選択をリセット（H/X 同士は 2 マス画面と同様に維持）
-        if (previous == _Study3Gate.ccz) {
-          _selectedPositions = [];
-          _selectedRow = null;
-          _selectedRowDirection = null;
-        }
-      }
+      _selectedPositions = all;
     });
     _maybeShowAdvancedTutorialByProgress();
   }
 
-  void _handleRowSelection(int row, String direction) {
-    if (_selectedGate == _Study3Gate.ccz || _sequenceFailed || _measured) return;
-    setState(() {
-      final same = _selectedRow == row && _selectedRowDirection == direction;
-      _selectedRow = same ? null : row;
-      _selectedRowDirection = same ? null : direction;
-      if (_selectedRow != null) {
-        _selectedPositions = _getRowPositionsAll(_displayBoard, row, direction);
-      } else {
-        _selectedPositions = [];
-      }
-      _message = null;
-    });
-  }
-
-  List<Position> _getRowPositionsAll(Board board, int row, String direction) {
-    final positions = <Position>[];
-    if (direction == 'left') {
-      for (int col = 0; col < board.cols; col++) {
-        positions.add(Position(row, col));
-      }
-    } else {
-      for (int col = board.cols - 1; col >= 0; col--) {
-        positions.add(Position(row, col));
-      }
-    }
-    return positions;
+  void _handleRowSelection(int _, String __) {
+    // 3マススタディでは行/列ボタンを使わず、ゲート選択時に全マス自動選択する。
   }
 
   List<Position> _getHighlightedPositions(Board board) {
@@ -443,51 +413,13 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   }
 
   void _handlePositionTap(Position position) {
-    if (_sequenceFailed || _measured) return;
-    setState(() {
-      _message = null;
-      if (_selectedGate == _Study3Gate.ccz) {
-        _selectedRow = null;
-        _selectedRowDirection = null;
-        if (_selectedPositions.isEmpty) {
-          _selectedPositions = [position];
-          return;
-        }
-        if (_selectedPositions.length == 1) {
-          final first = _selectedPositions.first;
-          if ((first.col - position.col).abs() != 1) {
-            _selectedPositions = [position];
-            _message = 'CCZは最初に隣接する2マスを制御ビットとして選択してください';
-            return;
-          }
-          _selectedPositions.add(position);
-          return;
-        }
-        if (_selectedPositions.length == 2) {
-          if (_selectedPositions.contains(position)) {
-            return;
-          }
-          _selectedPositions.add(position);
-          return;
-        }
-        _selectedPositions = [position];
-        return;
-      }
-
-      _selectedRow = null;
-      _selectedRowDirection = null;
-      if (_selectedPositions.length == 1 && _selectedPositions.first == position) {
-        _selectedPositions = [];
-      } else {
-        _selectedPositions = [position];
-      }
-    });
+    // 3マススタディではマスタップで対象を選ばない（ゲート選択で全マス自動選択）。
   }
 
   void _applyGate() {
     if (!_canApplyGate) return;
     final gate = _selectedGate!;
-    final next = List<double>.from(_amplitudes);
+    final next = List<QComplex>.from(_amplitudes);
     final cols = _selectedPositions.map((p) => p.col).toSet().toList()..sort();
     final ops = <Map<String, dynamic>>[];
 
@@ -508,8 +440,6 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
       _amplitudes = _normalize(next);
       _selectedGate = null;
       _selectedPositions = [];
-      _selectedRow = null;
-      _selectedRowDirection = null;
       if (!valid) {
         _sequenceFailed = true;
         _message = '手順が違います。リセットで最初からやり直してください。';
@@ -584,7 +514,11 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     });
   }
 
-  void _applySingleQubit(List<double> state, int targetQubit, List<List<double>> matrix) {
+  void _applySingleQubit(
+    List<QComplex> state,
+    int targetQubit,
+    List<List<QComplex>> matrix,
+  ) {
     final mask = 1 << (2 - targetQubit);
     for (int i = 0; i < 8; i++) {
       if ((i & mask) != 0) continue;
@@ -596,14 +530,28 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     }
   }
 
-  void _applyCcz(List<double> state) {
-    state[7] = -state[7];
+  void _applyCcz(List<QComplex> state) {
+    state[7] = state[7].scaled(-1.0);
   }
 
-  List<double> _normalize(List<double> values) {
-    final norm = math.sqrt(values.fold<double>(0, (sum, v) => sum + v * v));
-    if (norm == 0) return [1, 0, 0, 0, 0, 0, 0, 0];
-    return values.map((v) => v / norm).toList();
+  List<QComplex> _normalize(List<QComplex> values) {
+    final norm = math.sqrt(
+      values.fold<double>(0, (sum, v) => sum + v.normSquared()),
+    );
+    if (norm == 0) {
+      return [
+        QComplex.one,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+      ];
+    }
+    final inv = 1 / norm;
+    return values.map((v) => v.scaled(inv)).toList();
   }
 
   /// その量子ビットが |1⟩ 側にいる存在確率 P(|1⟩)
@@ -612,7 +560,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     var p1 = 0.0;
     for (int i = 0; i < 8; i++) {
       if ((i & mask) != 0) {
-        p1 += _amplitudes[i] * _amplitudes[i];
+        p1 += _amplitudes[i].normSquared();
       }
     }
     return p1.clamp(0.0, 1.0);
@@ -631,7 +579,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     final mask = 1 << (2 - qubit);
     for (int i = 0; i < 8; i++) {
       if ((i & mask) != 0) {
-        p1 += _amplitudes[i] * _amplitudes[i];
+        p1 += _amplitudes[i].normSquared();
       }
     }
 
@@ -639,7 +587,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     for (int i = 0; i < 8; i++) {
       if ((i & mask) != 0) continue;
       final j = i | mask;
-      xExp += 2 * _amplitudes[i] * _amplitudes[j];
+      final prod = _amplitudes[i].conj() * _amplitudes[j];
+      xExp += 2 * prod.re;
     }
     final zExp = 1.0 - 2.0 * p1;
     final blochLengthSq = xExp * xExp + zExp * zExp;
@@ -670,7 +619,10 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     }
 
     setState(() {
-      _amplitudes = List<double>.generate(8, (i) => i == picked ? 1.0 : 0.0);
+      _amplitudes = List<QComplex>.generate(
+        8,
+        (i) => i == picked ? QComplex.one : QComplex.zero,
+      );
       _measured = true;
       _message = '測定結果: ${_basisLabels[picked]}';
     });
@@ -685,11 +637,18 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
 
   void _resetAll() {
     setState(() {
-      _amplitudes = [1, 0, 0, 0, 0, 0, 0, 0];
+      _amplitudes = [
+        QComplex.one,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+        QComplex.zero,
+      ];
       _selectedGate = null;
       _selectedPositions = [];
-      _selectedRow = null;
-      _selectedRowDirection = null;
       _stepIndex = 0;
       _currentStepAppliedQubits.clear();
       _sequenceFailed = false;
@@ -720,12 +679,9 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
       return '回路の適用が完了しました。測定を押すと状態が確定します。';
     }
     if (_selectedGate == null) {
-      return 'H / X / CCZ のいずれかを選び、盤面で対象を指定します。';
+      return 'H / X / CCZ のいずれかを選んでください。';
     }
-    if (_selectedGate == _Study3Gate.ccz) {
-      return 'CCZ: 隣接2マスを制御として選択し、最後に残り1マスをZ対象として選択。';
-    }
-    return 'H/X: 1マス選択または左右の行ボタンで3マスまとめて選択。';
+    return '「ゲートを適用」を押してください。';
   }
 
   Widget _buildStudyGroverPiece(
@@ -927,6 +883,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   @override
   Widget build(BuildContext context) {
     final probs = _probabilities;
+    final gaugeAmp = globalPhaseGaugeFirstPositive(_amplitudes);
+    final amps = gaugeAmp.map((z) => z.re).toList();
     final board = _displayBoard;
 
     final step = _tutorialStepIndex == null ? null : _tutorialSteps[_tutorialStepIndex!];
@@ -973,68 +931,102 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                 children: [
                                   Expanded(
                                     child: Stack(
-                              children: [
-                                StudyQuantumGraphCard(
-                                  title: '確率振幅（-1 ～ 1）',
-                                  child: StudyQuantumStateBarChart(
-                                    values: _amplitudes,
-                                    labels: _basisLabels,
-                                    minY: -1,
-                                    maxY: 1,
-                                    barColor: const Color(0xFF57D6FF),
-                                    zeroLineColor: const Color(0xFF9AA3C1),
-                                    valueFormatter: (v) => v.toStringAsFixed(2),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  top: 0,
-                                  bottom: 0,
-                                  child: LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      const leftPad = 34.0;
-                                      const rightPad = 10.0;
-                                      const topPad = 10.0;
-                                      const bottomPad = 24.0;
-                                      const barWidthRatio = 0.52;
-                                      const count = 8.0;
-                                      const horizontalExpandFactor = 2.0;
-                                      const verticalNudge = 12.0; // 約1文字分下へ
-
-                                      final totalW = constraints.maxWidth;
-                                      final chartW =
-                                          (totalW - leftPad - rightPad).clamp(0.0, totalW);
-                                      final sectionW = chartW / count;
-                                      final barW = sectionW * barWidthRatio;
-                                      final lastBarLeft =
-                                          leftPad + sectionW * 7 + (sectionW - barW) / 2;
-                                      final expandedW = barW * horizontalExpandFactor;
-                                      final expandedLeft = (lastBarLeft -
-                                              barW * (horizontalExpandFactor - 1))
-                                          .clamp(leftPad, leftPad + chartW - expandedW)
-                                          .toDouble();
-                                      final highlightTop = topPad + verticalNudge;
-                                      final highlightBottom = (bottomPad - verticalNudge)
-                                          .clamp(0.0, constraints.maxHeight)
-                                          .toDouble();
-                                      return Stack(
-                                        children: [
-                                          Positioned(
-                                            left: expandedLeft,
-                                            width: expandedW,
-                                            top: highlightTop,
-                                            bottom: highlightBottom,
-                                            child: Container(key: _amplitude111AreaKey),
+                                      children: [
+                                        StudyQuantumGraphCard(
+                                          title: '確率振幅（-1 ～ 1）',
+                                          child: StudyQuantumStateBarChart(
+                                            values: amps,
+                                            labels: _basisLabels,
+                                            minY: -1,
+                                            maxY: 1,
+                                            barColor: const Color(0xFF57D6FF),
+                                            zeroLineColor:
+                                                const Color(0xFF9AA3C1),
+                                            valueFormatter: (v) =>
+                                                v.toStringAsFixed(2),
                                           ),
-                                        ],
-                                      );
-                                    },
+                                        ),
+                                        Positioned(
+                                                left: 0,
+                                                right: 0,
+                                                top: 0,
+                                                bottom: 0,
+                                                child: LayoutBuilder(
+                                                  builder:
+                                                      (context, constraints) {
+                                                    const leftPad = 34.0;
+                                                    const rightPad = 10.0;
+                                                    const topPad = 10.0;
+                                                    const bottomPad = 24.0;
+                                                    const barWidthRatio =
+                                                        0.52;
+                                                    const count = 8.0;
+                                                    const horizontalExpandFactor =
+                                                        2.0;
+                                                    const verticalNudge =
+                                                        12.0; // 約1文字分下へ
+
+                                                    final totalW =
+                                                        constraints.maxWidth;
+                                                    final chartW = (totalW -
+                                                            leftPad -
+                                                            rightPad)
+                                                        .clamp(0.0, totalW);
+                                                    final sectionW =
+                                                        chartW / count;
+                                                    final barW = sectionW *
+                                                        barWidthRatio;
+                                                    final lastBarLeft =
+                                                        leftPad +
+                                                            sectionW * 7 +
+                                                            (sectionW - barW) /
+                                                                2;
+                                                    final expandedW = barW *
+                                                        horizontalExpandFactor;
+                                                    final expandedLeft =
+                                                        (lastBarLeft -
+                                                                barW *
+                                                                    (horizontalExpandFactor -
+                                                                        1))
+                                                            .clamp(
+                                                              leftPad,
+                                                              leftPad +
+                                                                  chartW -
+                                                                  expandedW,
+                                                            )
+                                                            .toDouble();
+                                                    final highlightTop =
+                                                        topPad + verticalNudge;
+                                                    final highlightBottom =
+                                                        (bottomPad -
+                                                                verticalNudge)
+                                                            .clamp(
+                                                              0.0,
+                                                              constraints
+                                                                  .maxHeight,
+                                                            )
+                                                            .toDouble();
+                                                    return Stack(
+                                                      children: [
+                                                        Positioned(
+                                                          left: expandedLeft,
+                                                          width: expandedW,
+                                                          top: highlightTop,
+                                                          bottom:
+                                                              highlightBottom,
+                                                          child: Container(
+                                                            key:
+                                                                _amplitude111AreaKey,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
                                   const SizedBox(height: 10),
                                   Expanded(
                                     child: Stack(
@@ -1173,12 +1165,11 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                           selectedPositions: _selectedPositions,
                                           highlightedPositions: _getHighlightedPositions(board),
                                           lastTwoBitGatePositions: const [],
-                                          enableRowColumnButtons: true,
+                                          enableRowColumnButtons: false,
+                                          showRowButtons: false,
                                           showColumnButtons: false,
                                           selectedGate: _gateTypeForBoard(),
-                                          selectedRows: _selectedRow != null
-                                              ? {_selectedRow!: true}
-                                              : null,
+                                          selectedRows: null,
                                           cellSize: 50,
                                           pieceBuilder: _buildStudyGroverPiece,
                                           onPositionTap: _handlePositionTap,

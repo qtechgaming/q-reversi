@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../../core/quantum/qcomplex.dart';
+import '../../core/quantum/study_quantum_gauge.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/piece.dart';
 import '../../domain/entities/piece_type.dart';
@@ -66,7 +68,7 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
         title: 'ブロッホ球',
         targetKey: _upperHalfAreaKey,
         message:
-            'ブロッホ球は、量子ビットの状態を球面上の点で表すモデルです。ここでは青の点で表しています。\nまた、ゲートの適用は、対応する軸まわりの回転として表現することができます。\nまずはゲートを1つ適用してみましょう。',
+            'ブロッホ球とは、量子ビットの状態を球面上の点で表すモデルです。ここでは青の点で表しています。\nまた、ゲートの適用は、対応する軸まわりの回転として表現することができます。\nまずはゲートを1つ適用してみましょう。',
       ),
       const StudyTextTutorialStep(
         title: 'ゲート操作',
@@ -76,20 +78,20 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
       StudyTextTutorialStep(
         title: '確率振幅へ',
         targetKey: _amplitudeTabKey,
-        message: '次は確率振幅を見てみましょう。「確率振幅」のタブをタップしてください。',
+        message: '次は確率振幅を見てみましょう。準備ができたら「確率振幅」をタップしてください。',
         highlightExpandX: 10,
       ),
       StudyTextTutorialStep(
         title: '確率振幅',
         targetKey: _amplitudeGraphKey,
         message:
-            '量子ビットには0と1の中間状態があり、複素数で表すことができます。確率振幅は、その量子状態が0もしくは1へ現れる重みを表す量です。本スタディでは直感を優先し、複素数成分は省略して、実数の確率振幅として表示しています。',
+            '量子ビットは0と1の中間状態を取り、その状態は複素数で表されます。確率振幅は、観測時に0または1として現れる重みを表す量です。\n※このゲームでは、グローバル位相（全成分に共通の位相）を除き、先頭の非ゼロ振幅が正の実数になるようにそろえたうえで、実数振幅（-1～1）として表示しています。',
       ),
       StudyTextTutorialStep(
         title: '存在確率',
         targetKey: _probabilityGraphKey,
         message:
-            '確率振幅は2乗すると存在確率（観測される確率）になります。\nゲートで駒を操作して、4つの状態それぞれの確率振幅と存在確率の両方を見比べてみてください。',
+            '確率振幅は2乗すると存在確率（観測される確率）になります。\nゲートを操作して、それぞれの駒の確率振幅と存在確率の両方を見比べてみてください。',
         nextLabel: '完了',
       ),
     ];
@@ -397,28 +399,39 @@ class _StudyOneCellQuantumScreenState extends State<StudyOneCellQuantumScreen>
     }
   }
 
-  /// 計算基底（|0⟩=+y）での実数振幅 [a0, a1]（2マス画面と同じ棒グラフ用）
-  List<double> _realAmplitudes01(BlochVector raw) {
+  /// 計算基底（|0⟩=+y）での複素振幅 [α0, α1]。
+  ///
+  /// 画面の Bloch ベクトル (vx, vy, vz) は、表示を変えずに標準の
+  /// (nx, ny, nz) へ **ny↔vx, nz↔vy, nx↔vz** と対応する座標系（|0⟩が+y、|+⟩が+z 等）とみなす。
+  /// よって教科書の |ψ⟩=cos(θ/2)|0⟩+e^{iφ}sin(θ/2)|1⟩ では
+  /// φ=atan2(ny,nx)=**atan2(vx, vz)**。αを実数に取る慣用のもと
+  /// β=√p1·e^{iφ}（p0=(1+vy)/2）。**atan2(vz,vx) だと |+⟩ が (|0⟩+i|1⟩)/√2 になって誤る**。
+  List<QComplex> _complexAmplitudes01(BlochVector raw) {
     final v = raw.normalized();
     final p0 = ((1.0 + v.y) * 0.5).clamp(0.0, 1.0);
     final p1 = (1.0 - p0).clamp(0.0, 1.0);
+    final r0 = math.sqrt(p0);
+    final r1 = math.sqrt(p1);
     final r = math.sqrt(v.x * v.x + v.z * v.z);
 
-    if (p1 < 1e-12) {
-      return [math.sqrt(p0), 0.0];
+    if (r1 < 1e-12) {
+      return [QComplex(r0, 0), QComplex.zero];
     }
-    if (p0 < 1e-12) {
-      return [0.0, v.y < 0 ? math.sqrt(p1) : -math.sqrt(p1)];
+    if (r0 < 1e-12) {
+      final phi = math.atan2(v.x, v.z);
+      return [QComplex.zero, QComplex.polar(r1, phi)];
     }
     if (r < 1e-12) {
-      return [math.sqrt(p0), 0.0];
+      return [QComplex(r0, 0), QComplex.zero];
     }
-    return [math.sqrt(p0), math.sqrt(p1) * (v.z / r)];
+    final phi = math.atan2(v.x, v.z);
+    return [QComplex(r0, 0), QComplex.polar(r1, phi)];
   }
 
   Widget _buildAmplitudeGraphTab(BlochVector v) {
-    final amps = _realAmplitudes01(v);
-    final probs = amps.map((a) => (a * a).clamp(0.0, 1.0)).toList();
+    final cpx = globalPhaseGaugeFirstPositive(_complexAmplitudes01(v));
+    final amps = cpx.map((z) => z.re).toList();
+    final probs = cpx.map((z) => z.normSquared().clamp(0.0, 1.0)).toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),

@@ -98,7 +98,7 @@ class StudyQuantumIntroTutorialService {
         slideId: 'gate_x-1',
         texts: [
           '1つのビットに作用し、白|\u20600\u2060⟩と黒|\u20601\u2060⟩を入れ替えます。',
-          'グレーには作用しません。',
+          'グレー駒は変化させません。',
         ],
         visualElement: TutorialVisualElement(
           type: VisualElementType.image,
@@ -119,7 +119,7 @@ class StudyQuantumIntroTutorialService {
         slideId: 'gate_z-1',
         texts: [
           '1つのビットに作用し、グレープラス|\u2060+\u2060⟩とグレーマイナス|\u2060-\u2060⟩を入れ替えます。',
-          '白と黒には作用しません。',
+          '白と黒は変化させません。',
         ],
         visualElement: TutorialVisualElement(
           type: VisualElementType.image,
@@ -149,7 +149,7 @@ class StudyQuantumIntroTutorialService {
       TutorialSlide(
         slideId: 'study_gate_cnot_1-1',
         texts: [
-          'CNOTゲートはControl-NOT(コントロール・ノット)の略で、別名Control-X(コントロール・X)とも呼ばれます。2つの隣接する駒に作用し、1ビット目(制御ビット)が黒|\u20601\u2060⟩の時のみ、2ビット目(ターゲットビット)にXゲートの効果(白と黒の入れ替え)を適用します。',
+          'CNOTゲートはControl-NOT(コントロール・ノット)の略で、別名Control-X(コントロール・X)とも呼ばれます。\n2つの隣接する駒に作用し、1ビット目(制御ビット)が黒|\u20601\u2060⟩の時のみ、2ビット目(ターゲットビット)にXゲートの効果(白と黒の入れ替え)を適用します。',
         ],
         visualElement: TutorialVisualElement(
           type: VisualElementType.image,
@@ -181,7 +181,7 @@ class StudyQuantumIntroTutorialService {
       TutorialSlide(
         slideId: 'gate_cnot_2-3',
         texts: [
-          'このような状態を"エンタングルメント"と呼び、このゲームでは以下の通りに表現することとします。',
+          'このような状態を"エンタングルメント(量子もつれ)"と呼び、このゲームでは以下の通りに表現することとします。',
         ],
         visualElement: TutorialVisualElement(
           type: VisualElementType.image,
@@ -211,8 +211,8 @@ class StudyQuantumIntroTutorialService {
       TutorialSlide(
         slideId: 'finish-1',
         texts: [
-          '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、圧倒的な速度の計算ができるようになるのです。',
-          'スタディモードの次のステップに進んで、量子コンピュータのさらなる理解と量子アルゴリズムの一端を感じてみてください...!',
+          '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、高速な計算が可能になるのです。',
+          'スタディモードの次のステップに進んで、量子コンピュータと量子アルゴリズムの一端を感じてみてください...!',
         ],
         visualElement: TutorialVisualElement(
           type: VisualElementType.board,
