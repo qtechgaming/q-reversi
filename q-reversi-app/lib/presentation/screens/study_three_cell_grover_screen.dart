@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../core/constants/game_constants.dart';
 import '../../core/quantum/qcomplex.dart';
-import '../../core/quantum/study_quantum_gauge.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/piece.dart';
@@ -13,7 +12,7 @@ import '../widgets/study/study_quantum_graph_widgets.dart';
 import '../widgets/study/study_text_tutorial_overlay.dart';
 import '../../domain/services/study_text_progress_service.dart';
 
-enum _Study3Gate { h, x, ccz }
+enum _Study3Gate { h, x, ccz, diffusion }
 
 class _CircuitStep {
   const _CircuitStep.oneBit(this.gate)
@@ -24,6 +23,11 @@ class _CircuitStep {
       : gate = _Study3Gate.ccz,
         isOneBit = false,
         label = 'CCZ';
+
+  const _CircuitStep.diffusion()
+      : gate = _Study3Gate.diffusion,
+        isOneBit = false,
+        label = 'Diff';
 
   final _Study3Gate gate;
   final bool isOneBit;
@@ -39,6 +43,9 @@ class StudyThreeCellGroverScreen extends StatefulWidget {
 }
 
 class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen> {
+  static const double _circuitColumnWidth = 52.0;
+  static const double _diffusionCircuitColumnWidth = 104.0;
+
   static const List<String> _basisLabels = [
     '|000⟩',
     '|001⟩',
@@ -53,17 +60,9 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   static const List<_CircuitStep> _groverSteps = [
     _CircuitStep.oneBit(_Study3Gate.h),
     _CircuitStep.ccz(),
-    _CircuitStep.oneBit(_Study3Gate.h),
-    _CircuitStep.oneBit(_Study3Gate.x),
+    _CircuitStep.diffusion(),
     _CircuitStep.ccz(),
-    _CircuitStep.oneBit(_Study3Gate.x),
-    _CircuitStep.oneBit(_Study3Gate.h),
-    _CircuitStep.ccz(),
-    _CircuitStep.oneBit(_Study3Gate.h),
-    _CircuitStep.oneBit(_Study3Gate.x),
-    _CircuitStep.ccz(),
-    _CircuitStep.oneBit(_Study3Gate.x),
-    _CircuitStep.oneBit(_Study3Gate.h),
+    _CircuitStep.diffusion(),
   ];
 
   static const double _invSqrt2 = 0.7071067811865475;
@@ -102,10 +101,14 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   final ScrollController _circuitScrollController = ScrollController();
   bool _autoCircuitScrollEnabled = true;
   final GlobalKey _boardAreaKey = GlobalKey();
+  final GlobalKey _circuitAreaKey = GlobalKey();
   final GlobalKey _upperGraphsAreaKey = GlobalKey();
   final GlobalKey _amplitude111AreaKey = GlobalKey();
   final GlobalKey _probability111AreaKey = GlobalKey();
   final GlobalKey _cczGateButtonKey = GlobalKey();
+  final GlobalKey _diffusionGateButtonKey = GlobalKey();
+  final GlobalKey _firstCczCircuitStepKey = GlobalKey();
+  final GlobalKey _firstDiffCircuitStepKey = GlobalKey();
   final GlobalKey _measurementResultKey = GlobalKey();
   int? _tutorialStepIndex;
   bool _advancedFlowEnabled = false;
@@ -143,7 +146,12 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     StudyTextTutorialStep(
       title: '新たなゲート(CCZ)',
       message:
-          '|111⟩を探し出すにあたり、一つ新たなゲートが必要になります。今回CCZ(Control-Control-Z）を使います。これは、CNOT(Control-X)と同じ考え方で、1ビット目、2ビット目が黒|1⟩の時にのみ、3ビット目にZを適用する操作になります。',
+          '|111⟩を探し出すにあたり、新たなゲートが必要になります。一つ目は、CCZ(Control-Control-Z)です。これは、CNOT(Control-X)と同じ考え方で、1ビット目と2ビット目が黒|1⟩の時にのみ、3ビット目にZを適用する操作になります。これによって、探したい|111⟩に印をつけることができます。',
+    ),
+    StudyTextTutorialStep(
+      title: '新たなゲート(Diff)',
+      message:
+          'もう一つは、Diff(Diffusion/反転)ゲートです。今回の3量子ビット・|111⟩探索では、Diffは H→X→CCZ→X→H の合成ゲートとして実装できます。\n[Diff = H→X→CCZ→X→H]\nこの操作により、各状態の確率振幅は「平均値に対して反転」し、印をつけた目標状態の振幅を増幅できます。',
     ),
     StudyTextTutorialStep(
       title: '量子回路',
@@ -162,6 +170,10 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
           'CCZによって、量子回路から探したい数字に印(確率振幅の符号反転)をつけます。',
     ),
     StudyTextTutorialStep(
+      title: '反転する',
+      message: 'Diffゲートによって、印をつけた数字の確率振幅を平均に対して反転させます',
+    ),
+    StudyTextTutorialStep(
       title: 'アルゴリズム1回分適用完了',
       message:
           'グローバーのアルゴリズムを1回適用しました。この時点で、|111⟩の存在確率が78%まで上がっています。もう1周アルゴリズムを適用すると、取り出したい状態の存在確率が最大化します。続けて、アルゴリズムを適用しましょう。',
@@ -174,12 +186,12 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     StudyTextTutorialStep(
       title: '測定完了',
       message:
-          '8個の候補から、目標の|111⟩を取り出せました。\n量子コンピュータは測定するまで内部状態を見ることはできません。このように、アルゴリズムで目標状態の確率を高め、最後に測定することで目的の状態を得ることができるのです。',
+          '8個の候補の中から、少ない操作で目標の|111⟩を取り出すことができました。\nこのように、重ね合わせなどの量子特有の性質を使うことで、問題によって効率よく解くことができるのです。',
     ),
     StudyTextTutorialStep(
       title: 'グローバーのアルゴリズム',
       message:
-          '今回は、3ビットかつ目標状態を指定して、グローバーのアルゴリズムを体験しました。ビット数を増やし、目標状態に印をつける回路を設計すれば、より多くの候補の中から目的の状態を効率よく見つけられます。\n「なぜ速く探せるのか」が気になった方は、ぜひ調べて学んでみてください。',
+          '今回は3ビットで|111⟩を探しましたが、ビット数を増やし、目標状態に印をつける回路を設計すれば、より多くの候補の中から効率よく探索できます。\n量子コンピュータには、ほかにも面白いアルゴリズムがたくさんあります。ぜひこの先も調べて学んでみてください。',
       nextLabel: '完了',
     ),
   ];
@@ -220,35 +232,41 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   void _advanceTutorial() {
     final index = _tutorialStepIndex;
     if (index == null) return;
-    if (index == 5) {
+    if (index == 6) {
       _advancedFlowEnabled = true;
       _closeTutorial(markSeen: true);
       _maybeShowAdvancedTutorialByProgress();
       return;
     }
-    if (index == 6) {
+    if (index == 7) {
       _waitingStep8ByCcz = true;
       _closeTutorial(markSeen: true);
       return;
     }
-    if (index == 7) {
+    if (index == 8) {
       _waitingStep9AfterStep8 = true;
       _closeTutorial(markSeen: true);
       return;
     }
-    if (index == 8) {
+    if (index == 9) {
+      setState(() {
+        _tutorialStepIndex = 10;
+      });
+      return;
+    }
+    if (index == 10) {
       _waitingStep10AfterStep9 = true;
       _closeTutorial(markSeen: true);
       return;
     }
-    if (index == 9) {
+    if (index == 11) {
       _waitingStep11AfterStep10 = true;
       _closeTutorial(markSeen: true);
       return;
     }
-    if (index == 10) {
+    if (index == 12) {
       setState(() {
-        _tutorialStepIndex = 11;
+        _tutorialStepIndex = 13;
       });
       return;
     }
@@ -283,7 +301,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
 
     if (!_shownStep7 && _stepIndex >= 1) {
       _shownStep7 = true;
-      setState(() => _tutorialStepIndex = 6);
+      setState(() => _tutorialStepIndex = 7);
       return;
     }
     if (!_shownStep8 && _stepIndex >= 2) {
@@ -293,17 +311,17 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
         return;
       }
       _shownStep8 = true;
-      setState(() => _tutorialStepIndex = 7);
+      setState(() => _tutorialStepIndex = 8);
       return;
     }
-    if (!_shownStep9 && _stepIndex >= 7) {
+    if (!_shownStep9 && _stepIndex >= 3) {
       if (_waitingStep9AfterStep8) {
         _waitingStep9AfterStep8 = false;
       } else {
         return;
       }
       _shownStep9 = true;
-      setState(() => _tutorialStepIndex = 8);
+      setState(() => _tutorialStepIndex = 9);
       return;
     }
     if (!_shownStep10 && _sequenceCompleted) {
@@ -313,7 +331,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
         return;
       }
       _shownStep10 = true;
-      setState(() => _tutorialStepIndex = 9);
+      setState(() => _tutorialStepIndex = 11);
       return;
     }
   }
@@ -355,6 +373,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
         return 'X';
       case _Study3Gate.ccz:
         return 'CCZ';
+      case _Study3Gate.diffusion:
+        return 'Diff';
     }
   }
 
@@ -367,6 +387,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
         return GateType.x;
       case _Study3Gate.ccz:
         return GateType.cnot;
+      case _Study3Gate.diffusion:
+        return null;
       case null:
         return null;
     }
@@ -429,10 +451,14 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
         _applySingleQubit(next, c, matrix);
         ops.add({'gate': gate, 'qubit': c});
       }
-    } else {
+    } else if (gate == _Study3Gate.ccz) {
       if (cols.length != 3) return;
       _applyCcz(next);
       ops.add({'gate': _Study3Gate.ccz});
+    } else {
+      if (cols.length != 3) return;
+      _applyDiffusion(next);
+      ops.add({'gate': _Study3Gate.diffusion});
     }
 
     final valid = _consumeOpsAndValidate(ops);
@@ -476,7 +502,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
       return true;
     }
 
-    if (ops.length != 1 || ops.first['gate'] != _Study3Gate.ccz) {
+    if (ops.length != 1 || ops.first['gate'] != step.gate) {
       return false;
     }
     _stepIndex += 1;
@@ -502,7 +528,10 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_circuitScrollController.hasClients) return;
       final position = _circuitScrollController.position;
-      final target = (_stepIndex * 52.0).clamp(
+      final consumedWidth = _groverSteps
+          .take(_stepIndex)
+          .fold<double>(0.0, (sum, step) => sum + _circuitColumnWidthForStep(step));
+      final target = consumedWidth.clamp(
         0.0,
         position.maxScrollExtent,
       );
@@ -532,6 +561,27 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
 
   void _applyCcz(List<QComplex> state) {
     state[7] = state[7].scaled(-1.0);
+  }
+
+  void _applyDiffusion(List<QComplex> state) {
+    for (int q = 0; q < 3; q++) {
+      _applySingleQubit(state, q, _hMatrix);
+    }
+    for (int q = 0; q < 3; q++) {
+      _applySingleQubit(state, q, _xMatrix);
+    }
+    _applyCcz(state);
+    for (int q = 0; q < 3; q++) {
+      _applySingleQubit(state, q, _xMatrix);
+    }
+    for (int q = 0; q < 3; q++) {
+      _applySingleQubit(state, q, _hMatrix);
+    }
+    // H→X→CCZ→X→H は拡散演算とグローバル位相 -1 の差が出るため、
+    // 学習表示では見た目をそろえる目的で全体位相を戻す。
+    for (int i = 0; i < state.length; i++) {
+      state[i] = state[i].scaled(-1.0);
+    }
   }
 
   List<QComplex> _normalize(List<QComplex> values) {
@@ -630,7 +680,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
       _shownStep11 = true;
       _waitingStep11AfterStep10 = false;
       setState(() {
-        _tutorialStepIndex = 10;
+        _tutorialStepIndex = 12;
       });
     }
   }
@@ -679,9 +729,15 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
       return '回路の適用が完了しました。測定を押すと状態が確定します。';
     }
     if (_selectedGate == null) {
-      return 'H / X / CCZ のいずれかを選んでください。';
+      return 'H / CCZ / Diff のいずれかを選んでください。';
     }
     return '「ゲートを適用」を押してください。';
+  }
+
+  double _circuitColumnWidthForStep(_CircuitStep step) {
+    return step.gate == _Study3Gate.diffusion
+        ? _diffusionCircuitColumnWidth
+        : _circuitColumnWidth;
   }
 
   Widget _buildStudyGroverPiece(
@@ -795,7 +851,6 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   }
 
   Widget _buildCircuitView() {
-    const colW = 52.0;
     const circuitH = 108.0;
 
     return Opacity(
@@ -822,10 +877,16 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                 children: [
                   ...List.generate(_groverSteps.length, (i) {
                     final step = _groverSteps[i];
+                    final colW = _circuitColumnWidthForStep(step);
                     final consumed = i < _stepIndex;
                     final active =
                         i == _stepIndex && !_sequenceCompleted && !_sequenceFailed;
                     return SizedBox(
+                      key: i == 1
+                          ? _firstCczCircuitStepKey
+                          : i == 2
+                              ? _firstDiffCircuitStepKey
+                              : null,
                       width: colW,
                       height: circuitH,
                       child: CustomPaint(
@@ -861,8 +922,12 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   Widget _buildGateButton(_Study3Gate gate) {
     final selected = _selectedGate == gate;
     return SizedBox(
-      key: gate == _Study3Gate.ccz ? _cczGateButtonKey : null,
-      width: 88,
+      key: gate == _Study3Gate.ccz
+          ? _cczGateButtonKey
+          : gate == _Study3Gate.diffusion
+              ? _diffusionGateButtonKey
+              : null,
+      width: 76,
       child: ElevatedButton(
         onPressed: (_sequenceFailed || _measured || _sequenceCompleted)
             ? null
@@ -883,8 +948,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
   @override
   Widget build(BuildContext context) {
     final probs = _probabilities;
-    final gaugeAmp = globalPhaseGaugeFirstPositive(_amplitudes);
-    final amps = gaugeAmp.map((z) => z.re).toList();
+    final amps = _amplitudes.map((z) => z.re).toList();
     final board = _displayBoard;
 
     final step = _tutorialStepIndex == null ? null : _tutorialSteps[_tutorialStepIndex!];
@@ -934,16 +998,30 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                       children: [
                                         StudyQuantumGraphCard(
                                           title: '確率振幅（-1 ～ 1）',
-                                          child: StudyQuantumStateBarChart(
-                                            values: amps,
-                                            labels: _basisLabels,
-                                            minY: -1,
-                                            maxY: 1,
-                                            barColor: const Color(0xFF57D6FF),
-                                            zeroLineColor:
-                                                const Color(0xFF9AA3C1),
-                                            valueFormatter: (v) =>
-                                                v.toStringAsFixed(2),
+                                          child: Stack(
+                                            children: [
+                                              StudyQuantumStateBarChart(
+                                                values: amps,
+                                                labels: _basisLabels,
+                                                minY: -1,
+                                                maxY: 1,
+                                                barColor: const Color(0xFF57D6FF),
+                                                zeroLineColor:
+                                                    const Color(0xFF9AA3C1),
+                                                valueFormatter: (v) =>
+                                                    v.toStringAsFixed(2),
+                                              ),
+                                              if (_selectedGate == _Study3Gate.diffusion)
+                                                Positioned.fill(
+                                                  child: IgnorePointer(
+                                                    child: CustomPaint(
+                                                      painter: _AmplitudeAverageLinePainter(
+                                                        average: amps.reduce((a, b) => a + b) / amps.length,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
                                         Positioned(
@@ -1177,7 +1255,10 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      _buildCircuitView(),
+                                      Container(
+                                        key: _circuitAreaKey,
+                                        child: _buildCircuitView(),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -1187,9 +1268,9 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                   children: [
                                     _buildGateButton(_Study3Gate.h),
                                     const SizedBox(width: 8),
-                                    _buildGateButton(_Study3Gate.x),
-                                    const SizedBox(width: 8),
                                     _buildGateButton(_Study3Gate.ccz),
+                                    const SizedBox(width: 8),
+                                    _buildGateButton(_Study3Gate.diffusion),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
@@ -1262,6 +1343,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                               title: step.title,
                               message: step.message,
                               targetKey: _cczGateButtonKey,
+                              additionalHighlightKeys: [_firstCczCircuitStepKey],
+                              bubbleBottomAnchorKey: _circuitAreaKey,
                               nextLabel: step.nextLabel,
                               showNextButton: step.showNextButton,
                             )
@@ -1269,7 +1352,9 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                               ? StudyTextTutorialStep(
                                   title: step.title,
                                   message: step.message,
-                                  targetKey: _boardAreaKey,
+                                  targetKey: _diffusionGateButtonKey,
+                                  additionalHighlightKeys: [_firstDiffCircuitStepKey],
+                                  bubbleBottomAnchorKey: _circuitAreaKey,
                                   nextLabel: step.nextLabel,
                                   showNextButton: step.showNextButton,
                                 )
@@ -1277,7 +1362,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                   ? StudyTextTutorialStep(
                                       title: step.title,
                                       message: step.message,
-                                      targetKey: _upperGraphsAreaKey,
+                                      targetKey: _boardAreaKey,
                                       nextLabel: step.nextLabel,
                                       showNextButton: step.showNextButton,
                                     )
@@ -1285,7 +1370,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                       ? StudyTextTutorialStep(
                                           title: step.title,
                                           message: step.message,
-                                          targetKey: _amplitude111AreaKey,
+                                          targetKey: _upperGraphsAreaKey,
                                           nextLabel: step.nextLabel,
                                           showNextButton: step.showNextButton,
                                         )
@@ -1293,7 +1378,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                           ? StudyTextTutorialStep(
                                               title: step.title,
                                               message: step.message,
-                                              targetKey: _probability111AreaKey,
+                                              targetKey: _amplitude111AreaKey,
                                               nextLabel: step.nextLabel,
                                               showNextButton: step.showNextButton,
                                             )
@@ -1301,11 +1386,27 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                               ? StudyTextTutorialStep(
                                                   title: step.title,
                                                   message: step.message,
-                                                  targetKey: _probability111AreaKey,
+                                                  targetKey: _amplitude111AreaKey,
                                                   nextLabel: step.nextLabel,
                                                   showNextButton: step.showNextButton,
                                                 )
                                           : _tutorialStepIndex == 10
+                                              ? StudyTextTutorialStep(
+                                                  title: step.title,
+                                                  message: step.message,
+                                                  targetKey: _probability111AreaKey,
+                                                  nextLabel: step.nextLabel,
+                                                  showNextButton: step.showNextButton,
+                                                )
+                                          : _tutorialStepIndex == 11
+                                              ? StudyTextTutorialStep(
+                                                  title: step.title,
+                                                  message: step.message,
+                                                  targetKey: _probability111AreaKey,
+                                                  nextLabel: step.nextLabel,
+                                                  showNextButton: step.showNextButton,
+                                                )
+                                          : _tutorialStepIndex == 12
                                               ? StudyTextTutorialStep(
                                                   title: step.title,
                                                   message: step.message,
@@ -1408,13 +1509,14 @@ class _GroverCircuitColumnPainter extends CustomPainter {
         fill = const Color(0xFF252D48);
         border = const Color(0xFF3D4A66);
       }
-      // CCZ: 3本線にまたがるボックス＋接続
+      // CCZ / D: 3本線にまたがるボックス＋接続
       final topY = _wireYs.first - 10;
       final bottomY = _wireYs.last + 10;
+      final isDiff = step.gate == _Study3Gate.diffusion;
       final rect = RRect.fromRectAndRadius(
         Rect.fromCenter(
           center: Offset(w / 2, (topY + bottomY) / 2),
-          width: 34,
+          width: isDiff ? 68 : 34,
           height: bottomY - topY,
         ),
         const Radius.circular(5),
@@ -1433,12 +1535,16 @@ class _GroverCircuitColumnPainter extends CustomPainter {
           ..strokeWidth = isActive ? 2 : 1.2,
       );
       final cx = w / 2;
-      final dotPaint = Paint()..color = const Color(0xFFEAF0FF);
-      for (final y in _wireYs) {
-        canvas.drawCircle(Offset(cx, y), 3.2, dotPaint);
+      if (isDiff) {
+        _drawLabel(canvas, 'Diff', Offset(cx, (topY + bottomY) / 2), 11);
+      } else {
+        final dotPaint = Paint()..color = const Color(0xFFEAF0FF);
+        for (final y in _wireYs) {
+          canvas.drawCircle(Offset(cx, y), 3.2, dotPaint);
+        }
+        // ラベルは3本線の外（下側）に置き、ドットと重ならないようにする
+        _drawLabel(canvas, 'CCZ', Offset(cx, _wireYs.last + 24), 10);
       }
-      // ラベルは3本線の外（下側）に置き、ドットと重ならないようにする
-      _drawLabel(canvas, 'CCZ', Offset(cx, _wireYs.last + 24), 10);
     }
   }
 
@@ -1580,5 +1686,40 @@ class _GroverMeasureColumn extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _AmplitudeAverageLinePainter extends CustomPainter {
+  _AmplitudeAverageLinePainter({required this.average});
+
+  final double average;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftPad = 34.0;
+    const rightPad = 10.0;
+    const topPad = 10.0;
+    const bottomPad = 24.0;
+    const minY = -1.0;
+    const maxY = 1.0;
+
+    final chartHeight = (size.height - topPad - bottomPad).clamp(0.0, size.height);
+    final clampedAvg = average.clamp(minY, maxY);
+    final normalized = (maxY - clampedAvg) / (maxY - minY);
+    final y = topPad + chartHeight * normalized;
+
+    final paint = Paint()
+      ..color = const Color(0xFFFFD166).withValues(alpha: 0.95)
+      ..strokeWidth = 1.8;
+    canvas.drawLine(
+      Offset(leftPad, y),
+      Offset(size.width - rightPad, y),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _AmplitudeAverageLinePainter oldDelegate) {
+    return oldDelegate.average != average;
   }
 }
