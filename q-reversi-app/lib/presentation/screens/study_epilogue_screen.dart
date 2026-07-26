@@ -56,23 +56,23 @@ class StudyEpilogueScreen extends StatelessWidget {
                 _sectionTitle('さらに学ぶには'),
                 const SizedBox(height: 10),
                 Text(
-                  'ここまでで少しでも興味を持ってくれたら、次は入門書や講義をのぞいてみてください。そこでは、このゲームで表現しきれなかった部分も、数式を使って丁寧に説明されています。ぜひ、量子のより豊かな世界を追いかけてみてください。',
+                  'ここまでで少しでも興味を持ってくれたら、次は入門書や講義の動画等をのぞいてみてください。そこでは、このゲームで表現しきれなかった部分も、数式に基づき体系的に解説されています。量子のより深い理解へつながる一歩となれば幸いです。',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.92),
                     fontSize: 16,
                     height: 1.65,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  '数式は最初は難しく感じるかもしれませんが、一度つながるとゲームのルールのように美しく整理されています。あなたの好奇心が、次の一冊・次の一講義へつながることを願っています。',
-                  style: TextStyle(
-                    color: Color(0xFFB8C5FF),
-                    fontSize: 15,
-                    height: 1.65,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+                // const SizedBox(height: 16),
+                // const Text(
+                //   '数式は最初は難しく感じるかもしれませんが、一度つながるとゲームのルールのように美しく整理されています。あなたの好奇心が、次の一冊・次の一講義へつながることを願っています。',
+                //   style: TextStyle(
+                //     color: Color(0xFFB8C5FF),
+                //     fontSize: 15,
+                //     height: 1.65,
+                //     fontStyle: FontStyle.italic,
+                //   ),
+                // ),
               ],
             ),
           ),

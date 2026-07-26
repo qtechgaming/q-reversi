@@ -455,7 +455,7 @@ class _DiffCircuitPainter extends CustomPainter {
     const equalsGapLeft = 90.0;
     const equalsGapRight = 106.0;
     const diffRight = 76.0; // Diffゲート右端
-    final diffRightWireLength = equalsGapLeft - diffRight;
+    const diffRightWireLength = equalsGapLeft - diffRight;
     final rightWireEnd = centers[4] + 15.0 + diffRightWireLength;
 
     // 3本の量子線（= の位置は欠線、右端は最後のゲートで終了）

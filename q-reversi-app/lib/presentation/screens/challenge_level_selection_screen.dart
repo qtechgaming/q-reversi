@@ -5,26 +5,41 @@ import '../../domain/entities/challenge_progress.dart';
 import '../../domain/services/challenge_level_loader.dart';
 import '../providers/challenge_progress_notifier.dart';
 import 'challenge_game_screen.dart';
+import 'challenge_stage_advance_result.dart';
 
 /// チャレンジレベル選択画面
 class ChallengeLevelSelectionScreen extends StatefulWidget {
   const ChallengeLevelSelectionScreen({super.key});
 
   @override
-  State<ChallengeLevelSelectionScreen> createState() => _ChallengeLevelSelectionScreenState();
+  State<ChallengeLevelSelectionScreen> createState() =>
+      _ChallengeLevelSelectionScreenState();
 }
 
-class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionScreen> {
+class _ChallengeLevelSelectionScreenState
+    extends State<ChallengeLevelSelectionScreen> {
   final ChallengeLevelLoader _loader = ChallengeLevelLoader();
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _stageKeys = {};
+  final Map<int, ExpansionTileController> _stageControllers = {};
 
   List<ChallengeLevel> _levels = [];
   bool _isLoading = true;
   String? _error;
+  bool _isHandlingStageAdvance = false;
+  /// 次ステージ開始前にタップを促すレベル
+  int? _highlightedLevel;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -138,14 +153,31 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
       stages.putIfAbsent(stage, () => []).add(level);
     }
 
-    return ListView.builder(
+    final sortedStageNumbers = stages.keys.toList()..sort();
+    final visibleStageNumbers = <int>[];
+    var addedNextLockedStage = false;
+    for (final stageNumber in sortedStageNumbers) {
+      final isUnlocked = progressManager.isStageUnlocked(stageNumber);
+      if (isUnlocked) {
+        visibleStageNumbers.add(stageNumber);
+      } else if (!addedNextLockedStage) {
+        // 解放済みステージに続く、次の未解放ステージだけを予告表示する
+        visibleStageNumbers.add(stageNumber);
+        addedNextLockedStage = true;
+      }
+    }
+
+    return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: stages.length,
-      itemBuilder: (context, index) {
-        final stageNumber = index + 1;
-        final stageLevels = stages[stageNumber] ?? [];
-        return _buildStageCard(stageNumber, stageLevels, progressManager);
-      },
+      children: [
+        for (final stageNumber in visibleStageNumbers)
+          _buildStageCard(
+            stageNumber,
+            stages[stageNumber] ?? [],
+            progressManager,
+          ),
+      ],
     );
   }
 
@@ -154,28 +186,44 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
     List<ChallengeLevel> levels,
     ChallengeProgressManager progressManager,
   ) {
-    final isUnlocked =
-        progressManager.isStageUnlocked(stageNumber);
-    final completedCount = progressManager.getCompletedLevelsInStage(stageNumber);
+    final isUnlocked = progressManager.isStageUnlocked(stageNumber);
+    final completedCount =
+        progressManager.getCompletedLevelsInStage(stageNumber);
     final isPerfect = progressManager.isStagePerfect(stageNumber);
+    final stageKey = _stageKeys.putIfAbsent(stageNumber, GlobalKey.new);
+    final stageController = _stageControllers.putIfAbsent(
+      stageNumber,
+      ExpansionTileController.new,
+    );
 
     return Card(
+      key: stageKey,
       margin: const EdgeInsets.only(bottom: 16),
       color: const Color(0xFF1A1F3A).withOpacity(0.8),
       child: ExpansionTile(
+        controller: stageController,
         title: Row(
           children: [
             Text(
-              'ステージ $stageNumber',
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              stageNumber == 0 ? 'ステージ 0' : 'ステージ $stageNumber',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(width: 8),
-            if (isPerfect)
+            if (isPerfect) ...[
+              const SizedBox(width: 8),
               const Icon(Icons.verified, color: Colors.amber, size: 20),
+            ],
           ],
         ),
         subtitle: Text(
-          '$completedCount / ${levels.length} クリア',
+          stageNumber == 0 &&
+                  completedCount < levels.length &&
+                  !progressManager.isStage0RequirementMet()
+              ? '$completedCount / ${levels.length} クリア\n全クリアで他モード開放'
+              : '$completedCount / ${levels.length} クリア',
           style: const TextStyle(color: Colors.white70),
         ),
         leading: Icon(
@@ -195,10 +243,11 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
                 const maxCellSize = 80.0;
                 const spacing = 6.0;
                 const padding = 32.0; // 左右のパディング
-                
+
                 final availableWidth = constraints.maxWidth - padding;
-                final crossAxisCount = (availableWidth / (maxCellSize + spacing)).floor().clamp(4, 10);
-                
+                final crossAxisCount =
+                    (availableWidth / (maxCellSize + spacing)).floor().clamp(4, 10);
+
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -230,12 +279,13 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
     final progress = progressManager.allProgress[level.level];
     final isCompleted = progress?.isCompleted ?? false;
     final stars = progress?.stars ?? 0;
+    final isHighlighted = _highlightedLevel == level.level;
 
     return GestureDetector(
-      onTap: isUnlocked
-          ? () => _startLevel(level)
-          : null,
-      child: Container(
+      onTap: isUnlocked ? () => _startLevel(level) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
           gradient: isUnlocked
               ? (isCompleted
@@ -259,14 +309,24 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
           color: isUnlocked ? null : const Color(0xFF1A202C),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isUnlocked
+            color: isHighlighted
+                ? Colors.lightBlueAccent
+                : isUnlocked
                 ? (isCompleted
                     ? Colors.green.withOpacity(0.6)
                     : Colors.blue.withOpacity(0.6))
                 : Colors.grey.withOpacity(0.4),
-            width: 1.5,
+            width: isHighlighted ? 3 : 1.5,
           ),
-          boxShadow: isUnlocked
+          boxShadow: isHighlighted
+              ? [
+                  BoxShadow(
+                    color: Colors.lightBlueAccent.withOpacity(0.75),
+                    blurRadius: 16,
+                    spreadRadius: 3,
+                  ),
+                ]
+              : isUnlocked
               ? [
                   BoxShadow(
                     color: (isCompleted ? Colors.green : Colors.blue)
@@ -290,12 +350,12 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      '${level.level}',
+                      level.displayLabel,
                       style: TextStyle(
                         color: isUnlocked
                             ? (isCompleted ? Colors.white : Colors.white)
                             : Colors.grey.withOpacity(0.5),
-                        fontSize: 16,
+                        fontSize: level.stageNumber == 0 ? 13 : 16,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
@@ -369,17 +429,135 @@ class _ChallengeLevelSelectionScreenState extends State<ChallengeLevelSelectionS
     );
   }
 
-  void _startLevel(ChallengeLevel level) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChallengeGameScreen(level: level),
-      ),
-    );
+  Future<void> _startLevel(ChallengeLevel level) async {
+    ChallengeLevel? current = level;
 
+    while (current != null && mounted) {
+      final result = await Navigator.push<Object?>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChallengeGameScreen(level: current!),
+        ),
+      );
+
+      if (!mounted) return;
+      // ディスクと同期（Notifier はクリア時に既に更新済みだが、保険として再読込）
+      await context.read<ChallengeProgressNotifier>().hydrate();
+      if (!mounted) return;
+
+      if (result is ChallengeContinueToLevelResult) {
+        current = result.level;
+        continue;
+      }
+
+      if (result is ChallengeStageAdvanceResult) {
+        await _revealNextStage(result);
+        if (!mounted) return;
+        current = result.firstLevel;
+        continue;
+      }
+
+      // OK / 戻る
+      current = null;
+    }
+  }
+
+  /// クリア済みステージ → 次ステージ → 先頭レベルの順に見せる
+  Future<void> _revealNextStage(ChallengeStageAdvanceResult result) async {
+    if (_isHandlingStageAdvance) return;
+    _isHandlingStageAdvance = true;
+
+    try {
+      // ① 一度戻り、クリアしたステージ全体を0.8秒見せる
+      await _showStageOverview(
+        result.completedStageNumber,
+        const Duration(milliseconds: 800),
+      );
+      if (!mounted) return;
+
+      // ② 次のステージへ移り、全体を見せる
+      await _scrollToAndOpenStage(
+        result.nextStageNumber,
+        const Duration(milliseconds: 400),
+      );
+      if (!mounted) return;
+
+      // ③ 最初のレベルを0.4秒ハイライトしてタップを促す
+      setState(() {
+        _highlightedLevel = result.firstLevel.level;
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      if (!mounted) return;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _highlightedLevel = null;
+        });
+      }
+      _isHandlingStageAdvance = false;
+    }
+  }
+
+  Future<void> _showStageOverview(
+    int stageNumber,
+    Duration displayDuration,
+  ) async {
+    setState(() {
+      _highlightedLevel = null;
+    });
+
+    _collapseOtherStages(stageNumber);
+    _stageControllers[stageNumber]?.expand();
+
+    // 展開アニメーション後に対象ステージへ寄せる
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     if (!mounted) return;
-    // ディスクと同期（Notifier はクリア時に既に更新済みだが、保険として再読込）
-    await context.read<ChallengeProgressNotifier>().hydrate();
+
+    await _scrollToStage(stageNumber);
+    await Future<void>.delayed(displayDuration);
+  }
+
+  /// 閉じた次ステージへスクロールしてから、カードを展開する
+  Future<void> _scrollToAndOpenStage(
+    int stageNumber,
+    Duration displayDuration,
+  ) async {
+    setState(() {
+      _highlightedLevel = null;
+    });
+
+    _collapseOtherStages(stageNumber);
+    _stageControllers[stageNumber]?.collapse();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    await _scrollToStage(stageNumber);
+    if (!mounted) return;
+
+    _stageControllers[stageNumber]?.expand();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    await Future<void>.delayed(displayDuration);
+  }
+
+  void _collapseOtherStages(int stageNumber) {
+    for (final entry in _stageControllers.entries) {
+      if (entry.key != stageNumber) {
+        entry.value.collapse();
+      }
+    }
+  }
+
+  Future<void> _scrollToStage(int stageNumber) async {
+    final stageContext = _stageKeys[stageNumber]?.currentContext;
+    if (stageContext != null) {
+      await Scrollable.ensureVisible(
+        stageContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.05,
+      );
+    }
   }
 }
-

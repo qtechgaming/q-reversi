@@ -1,8 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_navigator.dart';
-import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_state.dart';
 import '../../domain/entities/gate_type.dart';
 import '../../domain/entities/position.dart';
@@ -13,10 +13,35 @@ import '../../domain/entities/piece.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/forbidden_area.dart';
 import '../providers/game_provider.dart';
+import '../../domain/services/operation_order_preference_service.dart';
 import '../../domain/services/vs_cpu_progress_service.dart';
+import '../../domain/services/vs_play_guide_preference_service.dart';
+import '../../domain/services/vs_tutorial_x_flip_helper.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/gate_button.dart';
+import '../widgets/operation_order_settings_dialog.dart';
 import '../widgets/piece_widget.dart';
+import '../widgets/vs_play_guide_overlay.dart';
+
+enum _ResultPreview {
+  cpuWin,
+  cpuLoss,
+  cpuDraw,
+  pvpWhiteWin,
+  pvpBlackWin,
+  pvpDraw,
+}
+
+enum _VsTutorialStep {
+  selectX,
+  selectBoard,
+  apply,
+  explainForbidden,
+  cooldown,
+  gateStrength,
+  info,
+  measure,
+}
 
 /// ゲーム画面
 class GameScreen extends StatefulWidget {
@@ -45,6 +70,50 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   String? _selectedColumnDirection; // 'top' or 'bottom'
   int _lastObservedTurnCount = -1;
   String? _entangledErrorMessage; // エンタングル駒選択時のエラーメッセージ
+  /// true のとき従来どおりゲート／盤面を順不同で選択できる
+  bool _allowFreeSelectionOrder = false;
+  final _operationOrderPrefs = OperationOrderPreferenceService();
+  final _vsPlayGuidePrefs = VsPlayGuidePreferenceService();
+
+  _VsTutorialStep? _vsTutorialStep;
+  bool _vsTutorialSession = false;
+  bool _vsMeasureGuideShown = false;
+  /// ガイド表示中は false。次へで閉じてから操作待ちになる
+  bool _vsTutorialAwaitingAction = false;
+  VsTutorialBestTarget? _vsTutorialBestTarget;
+  OverlayEntry? _vsGuideOverlay;
+  Animation<double>? _vsRouteAnimation;
+  AnimationStatusListener? _vsRouteAnimationListener;
+  /// 遅延遷移のキャンセル用。操作結果を認識してから次ガイドへ進む間（約1テンポ）
+  static const Duration _vsTutorialNextGuideDelay =
+      Duration(milliseconds: 600);
+  /// 手番が戻ってから「自分のターン」ガイドを出すまでの間
+  static const Duration _vsTutorialOwnTurnGuideDelay =
+      Duration(milliseconds: 900);
+  int _vsTutorialStepToken = 0;
+
+  final GlobalKey _vsXGateKey = GlobalKey();
+  final GlobalKey _vsBoardKey = GlobalKey();
+  final GlobalKey _vsApplyGateKey = GlobalKey();
+  final GlobalKey _vsGateInfoKey = GlobalKey();
+  final GlobalKey _vsWhiteGatesKey = GlobalKey();
+  final GlobalKey _vsMeasureKey = GlobalKey();
+  final Map<String, GlobalKey> _vsBoardCustomKeys = {};
+
+  GlobalKey _vsBoardCustomKey(String id) =>
+      _vsBoardCustomKeys.putIfAbsent(id, GlobalKey.new);
+
+  void _ensureVsBoardCustomKeys(Board board) {
+    for (int r = 0; r < board.rows; r++) {
+      _vsBoardCustomKey('row_left_$r');
+      for (int c = 0; c < board.cols; c++) {
+        _vsBoardCustomKey('cell_${r}_$c');
+      }
+    }
+    for (int c = 0; c < board.cols; c++) {
+      _vsBoardCustomKey('column_top_$c');
+    }
+  }
 
   @override
   void initState() {
@@ -54,13 +123,355 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       postGameMeasurementCompleted: widget.initialPostGameMeasurementCompleted,
     );
     WidgetsBinding.instance.addObserver(this);
+    _loadOperationOrderPreference();
+    _maybeStartVsTutorial();
+  }
+
+  Future<void> _loadOperationOrderPreference() async {
+    final allowFree = await _operationOrderPrefs.isFreeSelectionOrderEnabled();
+    if (!mounted) return;
+    setState(() {
+      _allowFreeSelectionOrder = allowFree;
+    });
+  }
+
+  Future<void> _openOperationOrderSettings() async {
+    final result = await showOperationOrderSettingsDialog(context);
+    if (!mounted || result == null) return;
+    setState(() {
+      _allowFreeSelectionOrder = result;
+    });
+  }
+
+  /// ゲート先行モードでゲート未選択ならメッセージを出して操作をブロック
+  bool _blockIfGateRequiredFirst() {
+    if (_allowFreeSelectionOrder || _selectedGate != null) return false;
+    _entangledErrorMessage = '先にゲートを選択してください';
+    return true;
   }
 
   @override
   void dispose() {
+    _vsTutorialStepToken++;
+    if (_vsRouteAnimationListener != null && _vsRouteAnimation != null) {
+      _vsRouteAnimation!.removeStatusListener(_vsRouteAnimationListener!);
+    }
+    _vsRouteAnimation = null;
+    _vsRouteAnimationListener = null;
+    _hideVsGuideOverlay();
     WidgetsBinding.instance.removeObserver(this);
     _gameProvider.dispose();
     super.dispose();
+  }
+
+  Future<void> _maybeStartVsTutorial() async {
+    final state = widget.gameState;
+    if (state.gameMode != GameMode.vs || state.vsMode != VsMode.cpu) return;
+
+    final guideShown = await _vsPlayGuidePrefs.isShown();
+    final progress = await VsCpuProgressService().load();
+    if (!mounted) return;
+    // 既に対CPU戦を終えたユーザー／表示済みならスキップ
+    if (guideShown || progress.isHumanModeUnlocked) return;
+
+    _vsTutorialSession = true;
+    _startVsTutorialAfterRouteTransition();
+  }
+
+  void _startVsTutorialAfterRouteTransition() {
+    if (!mounted) return;
+    final routeAnimation = ModalRoute.of(context)?.animation;
+    _vsRouteAnimation = routeAnimation;
+    if (routeAnimation == null ||
+        routeAnimation.status == AnimationStatus.completed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _setVsTutorialStep(_VsTutorialStep.selectX);
+      });
+      return;
+    }
+
+    _vsRouteAnimationListener = (status) {
+      if (status != AnimationStatus.completed || !mounted) return;
+      routeAnimation.removeStatusListener(_vsRouteAnimationListener!);
+      _vsRouteAnimationListener = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _setVsTutorialStep(_VsTutorialStep.selectX);
+      });
+    };
+    routeAnimation.addStatusListener(_vsRouteAnimationListener!);
+  }
+
+  void _setVsTutorialStep(_VsTutorialStep? step) {
+    // 保留中の遅延遷移をキャンセル
+    _vsTutorialStepToken++;
+    _applyVsTutorialStep(step);
+  }
+
+  void _applyVsTutorialStep(_VsTutorialStep? step) {
+    setState(() {
+      _vsTutorialStep = step;
+      _vsTutorialAwaitingAction = false;
+      if (step == _VsTutorialStep.selectBoard) {
+        _vsTutorialBestTarget =
+            VsTutorialXFlipHelper.findBestTarget(_gameProvider.gameState.board);
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshVsGuideOverlay();
+    });
+  }
+
+  /// 操作完了後、1テンポおいてから次のガイドを表示する
+  void _scheduleVsTutorialStep(
+    _VsTutorialStep step, {
+    Duration? delay,
+  }) {
+    final token = ++_vsTutorialStepToken;
+    // 間のあいだは操作を止め、選択結果だけ見せる
+    setState(() {
+      _vsTutorialAwaitingAction = false;
+    });
+    Future.delayed(delay ?? _vsTutorialNextGuideDelay, () {
+      if (!mounted || token != _vsTutorialStepToken) return;
+      _applyVsTutorialStep(step);
+    });
+  }
+
+  /// selectX 待ち中に X 以外をタップしたときのガイド
+  bool _blockIfVsTutorialRequiresXFirst() {
+    if (_vsTutorialStep != _VsTutorialStep.selectX ||
+        !_vsTutorialAwaitingAction) {
+      return false;
+    }
+    _entangledErrorMessage = '最初はXを選択して下さい。';
+    return true;
+  }
+
+  void _closeVsGuideAndAwaitAction() {
+    _hideVsGuideOverlay();
+    setState(() {
+      _vsTutorialAwaitingAction = true;
+    });
+  }
+
+  void _hideVsGuideOverlay() {
+    _vsGuideOverlay?.remove();
+    _vsGuideOverlay = null;
+  }
+
+  /// FittedBox 配下でも正しい画面座標になるよう両端を変換する
+  Rect? _rectForKey(GlobalKey key) {
+    final renderObject = key.currentContext?.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return null;
+    final topLeft = renderObject.localToGlobal(Offset.zero);
+    final bottomRight = renderObject.localToGlobal(
+      Offset(renderObject.size.width, renderObject.size.height),
+    );
+    return Rect.fromPoints(topLeft, bottomRight);
+  }
+
+  Rect? _rectForBestTarget(VsTutorialBestTarget target) {
+    switch (target.kind) {
+      case VsTutorialTargetKind.row:
+        return _rectForKey(_vsBoardCustomKey('row_left_${target.row}'));
+      case VsTutorialTargetKind.column:
+        return _rectForKey(_vsBoardCustomKey('column_top_${target.column}'));
+      case VsTutorialTargetKind.fourPieces:
+        return _rectForTargetCells(target);
+    }
+  }
+
+  /// 適用したマス全体を囲む矩形（禁止領域ガイド用）
+  Rect? _rectForTargetCells(VsTutorialBestTarget target) {
+    Rect? union;
+    for (final pos in target.positions) {
+      final rect =
+          _rectForKey(_vsBoardCustomKey('cell_${pos.row}_${pos.col}'));
+      if (rect == null) continue;
+      union = union == null ? rect : union.expandToInclude(rect);
+    }
+    return union;
+  }
+
+  void _refreshVsGuideOverlay() {
+    _hideVsGuideOverlay();
+    final step = _vsTutorialStep;
+    if (step == null || !mounted || _vsTutorialAwaitingAction) return;
+
+    final config = _vsTutorialOverlayConfig(step);
+    if (config == null) return;
+
+    final targetRect = config.targetRect ?? _rectForKey(config.key!);
+    if (targetRect == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _vsTutorialStep != step) return;
+        _refreshVsGuideOverlay();
+      });
+      return;
+    }
+
+    final overlay = Overlay.of(context);
+    _vsGuideOverlay = OverlayEntry(
+      builder: (_) => VsPlayGuideOverlay(
+        targetRect: targetRect,
+        message: config.message,
+        nextLabel: config.nextLabel,
+        onNext: config.onNext,
+        scale: config.scale,
+        highlightPadding: config.highlightPadding,
+        borderWidth: config.borderWidth,
+      ),
+    );
+    overlay.insert(_vsGuideOverlay!);
+  }
+
+  _VsTutorialOverlayConfig? _vsTutorialOverlayConfig(_VsTutorialStep step) {
+    switch (step) {
+      case _VsTutorialStep.selectX:
+        return _VsTutorialOverlayConfig(
+          key: _vsXGateKey,
+          message: 'まずは X ゲートを選んでください',
+          nextLabel: 'OK',
+          onNext: _closeVsGuideAndAwaitAction,
+          scale: 1.25,
+        );
+      case _VsTutorialStep.selectBoard:
+        final best = _vsTutorialBestTarget ??
+            VsTutorialXFlipHelper.findBestTarget(_gameProvider.gameState.board);
+        _vsTutorialBestTarget = best;
+        return _VsTutorialOverlayConfig(
+          targetRect: _rectForBestTarget(best) ?? _rectForKey(_vsBoardKey),
+          message:
+              '自分の駒が最も増えるのは ${best.label} です'
+              '（差し引き +${best.netGain}：黒${best.blackFlips}→白）。\n'
+              '白枠の場所を選んでください',
+          nextLabel: 'OK',
+          onNext: _closeVsGuideAndAwaitAction,
+          scale: 1.15,
+        );
+      case _VsTutorialStep.apply:
+        return _VsTutorialOverlayConfig(
+          key: _vsApplyGateKey,
+          message: '「ゲートを適用」を押してください',
+          nextLabel: 'OK',
+          onNext: _closeVsGuideAndAwaitAction,
+          scale: 1.2,
+        );
+      case _VsTutorialStep.explainForbidden:
+        final best = _vsTutorialBestTarget;
+        return _VsTutorialOverlayConfig(
+          targetRect: best != null
+              ? (_rectForTargetCells(best) ?? _rectForKey(_vsBoardKey))
+              : _rectForKey(_vsBoardKey),
+          message:
+              '直前に適用した領域には、相手はゲートを適用できません。\n禁止領域として相手の手番に残ります',
+          nextLabel: '次へ',
+          onNext: _onVsTutorialContinueAfterForbidden,
+          scale: 1.0,
+          highlightPadding: 10,
+          borderWidth: 3.5,
+        );
+      case _VsTutorialStep.cooldown:
+        return _VsTutorialOverlayConfig(
+          key: _vsXGateKey,
+          message:
+              '自分のターンです。\nさっき使った X ゲートにはクールタイムが入っています',
+          nextLabel: '次へ',
+          onNext: () => _setVsTutorialStep(_VsTutorialStep.gateStrength),
+          scale: 1.25,
+        );
+      case _VsTutorialStep.gateStrength:
+        return _VsTutorialOverlayConfig(
+          key: _vsWhiteGatesKey,
+          message:
+              'ゲートの強さの目安です。\n相手の駒を多く自分の色に変えやすいほど強力です。\nX・Y ＞ H ＞ CNOT ＞ Z ＞ SWAP',
+          nextLabel: '次へ',
+          onNext: () => _setVsTutorialStep(_VsTutorialStep.info),
+          scale: 1.05,
+        );
+      case _VsTutorialStep.info:
+        return _VsTutorialOverlayConfig(
+          key: _vsGateInfoKey,
+          message: 'いつでもこの info ボタンから、各ゲートの効果を確認できます',
+          nextLabel: 'OK',
+          onNext: _finishVsTutorialIntro,
+          scale: 1.3,
+        );
+      case _VsTutorialStep.measure:
+        return _VsTutorialOverlayConfig(
+          key: _vsMeasureKey,
+          message: '20ターンに到達しました。\n「測定操作を実行」を押して勝敗を確定しましょう',
+          nextLabel: 'OK',
+          onNext: _closeVsGuideAndAwaitAction,
+          scale: 1.2,
+        );
+    }
+  }
+
+  Future<void> _onVsTutorialContinueAfterForbidden() async {
+    _hideVsGuideOverlay();
+    await _gameProvider.processPendingAiTurn();
+    if (!mounted) return;
+    // 自分のターンになったのを認識してからガイドを出す
+    _scheduleVsTutorialStep(
+      _VsTutorialStep.cooldown,
+      delay: _vsTutorialOwnTurnGuideDelay,
+    );
+  }
+
+  Future<void> _finishVsTutorialIntro() async {
+    await _vsPlayGuidePrefs.markShown();
+    if (!mounted) return;
+    _hideVsGuideOverlay();
+    setState(() {
+      _vsTutorialStep = null;
+      _vsTutorialAwaitingAction = false;
+    });
+  }
+
+  void _maybeShowVsMeasureGuide(GameProvider provider) {
+    if (!_vsTutorialSession || _vsMeasureGuideShown) return;
+    final state = provider.gameState;
+    if (!state.isGameOver || provider.postGameMeasurementCompleted) return;
+    _vsMeasureGuideShown = true;
+    _setVsTutorialStep(_VsTutorialStep.measure);
+  }
+
+  void _onVsTutorialAfterBoardSelection(GameProvider provider) {
+    if (_vsTutorialStep != _VsTutorialStep.selectBoard ||
+        !_vsTutorialAwaitingAction) {
+      return;
+    }
+    final best = _vsTutorialBestTarget;
+    if (best == null) return;
+
+    final matched = VsTutorialXFlipHelper.matchesTarget(
+      best,
+      selectedRow: _selectedRow,
+      selectedColumn: _selectedColumn,
+      selectedPositions: _selectedPositions,
+    );
+    if (!matched) {
+      setState(() {
+        _entangledErrorMessage =
+            '${best.label} を選んでください（自分の駒が最も増える場所です）';
+      });
+      return;
+    }
+    setState(() {
+      _entangledErrorMessage = null;
+    });
+    _scheduleVsTutorialStep(_VsTutorialStep.apply);
+  }
+
+  bool get _vsTutorialBlocksInteraction {
+    // ガイド表示中はオーバーレイが遮る。操作待ち以外の説明ステップでも操作させない
+    if (_vsTutorialStep == null) return false;
+    if (_vsTutorialAwaitingAction) return false;
+    return true;
   }
 
   @override
@@ -71,7 +482,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// VSモードで戻る操作（測定済みはモード設定へ、その他は保存確認）
+  /// VSモードで戻る操作（測定済みはモード設定へ、その他は中断確認。中断時は常に記録）
   Future<void> _handleVsPop(BuildContext context, GameProvider provider) async {
     if (!context.mounted) return;
     if (provider.gameState.gameMode != GameMode.vs) {
@@ -82,56 +493,59 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       await AppNavigator.exitVsToModeSetup();
       return;
     }
-    final choice = await showDialog<bool>(
+    final shouldInterrupt = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1F3A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         title: const Text(
-          '対戦の中断',
-          style: TextStyle(color: Colors.white),
+          '対戦を中断しますか？',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            height: 1.35,
+          ),
         ),
         content: const Text(
-          '続きから対戦できるように盤面を記録しておきますか？',
-          style: TextStyle(color: Colors.white70),
+          '盤面は保存されます。',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            height: 1.4,
+          ),
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text(
-              '対戦に戻る',
-              style: TextStyle(color: Colors.white70),
+              'いいえ',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+              ),
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text(
-                  'いいえ',
-                  style: TextStyle(color: Colors.white70),
-                ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'はい',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text(
-                  'はい',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
     if (!context.mounted) return;
-    if (choice == null) return;
-    if (choice) {
-      provider.persistVsSnapshotIfNeeded();
-    } else {
-      await VsGamePersistenceService().clear();
-    }
+    if (shouldInterrupt != true) return;
+    provider.persistVsSnapshotIfNeeded();
     if (!context.mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -158,6 +572,19 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           ),
           backgroundColor: const Color(0xFF1A1F3A),
           foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              tooltip: '操作設定',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: _openOperationOrderSettings,
+            ),
+            if (kDebugMode)
+              IconButton(
+                tooltip: 'デバッグメニュー',
+                icon: const Icon(Icons.bug_report_outlined),
+                onPressed: () => _showDebugMenu(context),
+              ),
+          ],
         ),
         body: Container(
           decoration: const BoxDecoration(
@@ -173,6 +600,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           child: Builder(
             builder: (context) {
               final currentPlayer = state.getCurrentPlayer();
+              if (state.gameMode == GameMode.vs) {
+                _ensureVsBoardCustomKeys(state.board);
+              }
               
               // VSモード: CPU等が手を進めたタイミングで、ローカルな「2ビット選択UI」状態を残さない
               // `BoardWidget` 側は「2ビット選択中は禁止領域を表示しない」ため、ターン変化で必ずクリアする
@@ -197,6 +627,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                     });
                   });
                 }
+              }
+
+              if (state.isGameOver) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _maybeShowVsMeasureGuide(provider);
+                });
               }
               
               return SafeArea(
@@ -232,10 +669,22 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                               child: Center(
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
-                                  child: BoardWidget(
+                                  child: KeyedSubtree(
+                                    key: _vsBoardKey,
+                                    child: BoardWidget(
                                     board: state.board,
                                     selectedPositions: _selectedPositions,
-                                    highlightedPositions: _getAdjacentPositions(state.board),
+                                    highlightedPositions:
+                                        _getAdjacentPositions(state.board),
+                                    suggestedPositions: _vsTutorialBestTarget !=
+                                                null &&
+                                            (_vsTutorialStep ==
+                                                    _VsTutorialStep
+                                                        .selectBoard ||
+                                                _vsTutorialStep ==
+                                                    _VsTutorialStep.apply)
+                                        ? _vsTutorialBestTarget!.positions
+                                        : const [],
                                     lastTwoBitGatePositions: currentPlayer != null
                                         ? state.getLastTwoBitGatePositions(currentPlayer.id)
                                         : [],
@@ -247,8 +696,33 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                     selectedColumns: _selectedColumn != null
                                         ? {_selectedColumn!: true}
                                         : null,
+                                    suggestedRows: _vsTutorialBestTarget?.row !=
+                                                null &&
+                                            (_vsTutorialStep ==
+                                                    _VsTutorialStep
+                                                        .selectBoard ||
+                                                _vsTutorialStep ==
+                                                    _VsTutorialStep.apply)
+                                        ? {_vsTutorialBestTarget!.row!: true}
+                                        : null,
+                                    suggestedColumns: _vsTutorialBestTarget
+                                                    ?.column !=
+                                                null &&
+                                            (_vsTutorialStep ==
+                                                    _VsTutorialStep
+                                                        .selectBoard ||
+                                                _vsTutorialStep ==
+                                                    _VsTutorialStep.apply)
+                                        ? {
+                                            _vsTutorialBestTarget!.column!:
+                                                true
+                                          }
+                                        : null,
                                     forbiddenAreas: currentPlayer != null
                                         ? state.getForbiddenAreas(currentPlayer.id)
+                                        : null,
+                                    customKeys: state.gameMode == GameMode.vs
+                                        ? _vsBoardCustomKeys
                                         : null,
                                     onPositionTap: (position) {
                                       _handlePositionTap(context, provider, position);
@@ -263,6 +737,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                         _handleColumnSelection(context, provider, col, direction);
                                       }
                                     },
+                                  ),
                                   ),
                                 ),
                               ),
@@ -484,7 +959,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                       children: [
                         // 白プレイヤーのゲート（左側）
                         Expanded(
-                          child: Column(
+                          child: KeyedSubtree(
+                            key: _vsWhiteGatesKey,
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const Text(
@@ -506,6 +983,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                   final isCurrentPlayer = currentPlayer.color == PlayerColor.white;
                                   
                                   return Padding(
+                                    key: gate == GateType.x ? _vsXGateKey : null,
                                     padding: const EdgeInsets.symmetric(horizontal: 4),
                                     child: SizedBox(
                                       width: 60,
@@ -580,6 +1058,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                                 }).toList(),
                               ),
                             ],
+                          ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -841,19 +1320,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                         : '2マス選択済み',
                 style: const TextStyle(color: Colors.white70),
               ),
-            if (state.gameMode == GameMode.freeRun && 
+            if ((state.gameMode == GameMode.freeRun ||
+                    state.gameMode == GameMode.vs) &&
                 (_selectedGate == null || _selectedGate!.isOneBitGate))
               Text(
                 _selectedGate == null
-                    ? 'ゲートを選択してください'
-                    : '行/列ボタンまたはマスを選択してください',
-                style: const TextStyle(color: Colors.white70),
-              ),
-            if (state.gameMode == GameMode.vs && 
-                (_selectedGate == null || _selectedGate!.isOneBitGate))
-              Text(
-                _selectedGate == null
-                    ? 'ゲートを選択してください'
+                    ? (_allowFreeSelectionOrder
+                        ? 'ゲートまたは盤面を選択してください'
+                        : '先にゲートを選択してください')
                     : '行/列ボタンまたはマスを選択してください',
                 style: const TextStyle(color: Colors.white70),
               ),
@@ -866,6 +1340,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               // ゲートを適用ボタン（測定操作を実行ボタンが表示されていない場合のみ表示）
               if (!state.isGameOver)
                 ElevatedButton(
+                  key: _vsApplyGateKey,
                   onPressed: _canApplyGate()
                       ? () => _applyGate(context, provider)
                       : null,
@@ -889,6 +1364,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               if (state.gameMode == GameMode.vs && !state.isGameOver) ...[
                 const SizedBox(width: 12),
                 IconButton(
+                  key: _vsGateInfoKey,
                   onPressed: () => _showVsGateInfoDialog(context),
                   icon: const Icon(Icons.info_outline, color: Colors.white),
                   tooltip: 'ゲート効果を見る',
@@ -1089,9 +1565,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     GameProvider provider,
   ) {
     return Container(
+      key: _vsMeasureKey,
       padding: const EdgeInsets.all(16),
       child: ElevatedButton(
         onPressed: () {
+          if (_vsTutorialStep == _VsTutorialStep.measure) {
+            if (!_vsTutorialAwaitingAction) return;
+            _hideVsGuideOverlay();
+            setState(() {
+              _vsTutorialStep = null;
+              _vsTutorialAwaitingAction = false;
+            });
+          }
           _showMeasurementConfirmation(context, provider);
         },
         style: ElevatedButton.styleFrom(
@@ -1182,15 +1667,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
     }
 
-    String result;
-    if (whiteCount > blackCount) {
-      result = '白の勝利！';
-    } else if (blackCount > whiteCount) {
-      result = '黒の勝利！';
-    } else {
-      result = '引き分け';
-    }
-
     final vsCpu = state.gameMode == GameMode.vs &&
         state.vsMode == VsMode.cpu;
     final cpuDifficulty = state.players[2]?.aiDifficulty;
@@ -1211,24 +1687,476 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     if (!context.mounted) return;
 
-    showDialog(
+    final isDraw = whiteCount == blackCount;
+    final playerWon = whiteCount > blackCount;
+    final result = vsCpu
+        ? isDraw
+            ? '引き分け'
+            : playerWon
+                ? '勝利！'
+                : '敗北'
+        : playerWon
+            ? '白の勝利！'
+            : isDraw
+                ? '引き分け'
+                : '黒の勝利！';
+    final resultLabel = isDraw
+        ? 'DRAW'
+        : vsCpu
+            ? playerWon
+                ? 'VICTORY'
+                : 'DEFEAT'
+            : 'WINNER';
+    final accentColor = isDraw
+        ? const Color(0xFFE2E8F0)
+        : vsCpu && !playerWon
+            ? const Color(0xFFA855F7)
+            : const Color(0xFF06B6D4);
+
+    await _showAnimatedGameResultDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      result: result,
+      whiteCount: whiteCount,
+      blackCount: blackCount,
+      accentColor: accentColor,
+      isDraw: isDraw,
+      isVsCpu: vsCpu,
+      playerWon: playerWon,
+      resultLabel: resultLabel,
+    );
+  }
+
+  Future<void> _showDebugMenu(BuildContext context) async {
+    if (!kDebugMode) return;
+
+    final action = await showDialog<Object>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
         backgroundColor: const Color(0xFF1A1F3A),
         title: const Text(
-          'ゲーム終了',
+          'デバッグメニュー',
           style: TextStyle(color: Colors.white),
         ),
-        content: Text(
-          '$result\n白: $whiteCount, 黒: $blackCount',
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(dialogContext, 'restart_vs_tutorial'),
             child: const Text(
-              'OK',
+              'VS初回ガイドを開始',
               style: TextStyle(color: Colors.white),
+            ),
+          ),
+          const Divider(color: Colors.white24),
+          _buildPreviewOption(
+            dialogContext,
+            label: 'CPU戦：勝利',
+            value: _ResultPreview.cpuWin,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: 'CPU戦：敗北',
+            value: _ResultPreview.cpuLoss,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: 'CPU戦：引き分け',
+            value: _ResultPreview.cpuDraw,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: '対人戦：白の勝利',
+            value: _ResultPreview.pvpWhiteWin,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: '対人戦：黒の勝利',
+            value: _ResultPreview.pvpBlackWin,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: '対人戦：引き分け',
+            value: _ResultPreview.pvpDraw,
+          ),
+        ],
+      ),
+    );
+
+    if (!context.mounted || action == null) return;
+    if (action == 'restart_vs_tutorial') {
+      _vsTutorialSession = true;
+      _vsMeasureGuideShown = false;
+      _vsTutorialBestTarget = null;
+      _vsTutorialAwaitingAction = false;
+      _setVsTutorialStep(_VsTutorialStep.selectX);
+      return;
+    }
+    if (action is _ResultPreview) {
+      await _showResultPreview(context, action);
+    }
+  }
+
+  Widget _buildPreviewOption(
+    BuildContext context, {
+    required String label,
+    required _ResultPreview value,
+  }) {
+    return SimpleDialogOption(
+      onPressed: () => Navigator.pop(context, value),
+      child: Text(label, style: const TextStyle(color: Colors.white)),
+    );
+  }
+
+  Future<void> _showResultPreview(
+    BuildContext context,
+    _ResultPreview preview,
+  ) async {
+    late final String result;
+    late final String resultLabel;
+    late final int whiteCount;
+    late final int blackCount;
+    late final bool isVsCpu;
+
+    switch (preview) {
+      case _ResultPreview.cpuWin:
+        result = '勝利！';
+        resultLabel = 'VICTORY';
+        whiteCount = 18;
+        blackCount = 10;
+        isVsCpu = true;
+      case _ResultPreview.cpuLoss:
+        result = '敗北';
+        resultLabel = 'DEFEAT';
+        whiteCount = 9;
+        blackCount = 19;
+        isVsCpu = true;
+      case _ResultPreview.cpuDraw:
+        result = '引き分け';
+        resultLabel = 'DRAW';
+        whiteCount = 14;
+        blackCount = 14;
+        isVsCpu = true;
+      case _ResultPreview.pvpWhiteWin:
+        result = '白の勝利！';
+        resultLabel = 'WINNER';
+        whiteCount = 17;
+        blackCount = 11;
+        isVsCpu = false;
+      case _ResultPreview.pvpBlackWin:
+        result = '黒の勝利！';
+        resultLabel = 'WINNER';
+        whiteCount = 10;
+        blackCount = 18;
+        isVsCpu = false;
+      case _ResultPreview.pvpDraw:
+        result = '引き分け';
+        resultLabel = 'DRAW';
+        whiteCount = 14;
+        blackCount = 14;
+        isVsCpu = false;
+    }
+
+    final isDraw = whiteCount == blackCount;
+    final playerWon = whiteCount > blackCount;
+    final accentColor = isDraw
+        ? const Color(0xFFE2E8F0)
+        : isVsCpu && !playerWon
+            ? const Color(0xFFA855F7)
+            : const Color(0xFF06B6D4);
+
+    await _showAnimatedGameResultDialog(
+      context: context,
+      result: result,
+      whiteCount: whiteCount,
+      blackCount: blackCount,
+      accentColor: accentColor,
+      isDraw: isDraw,
+      isVsCpu: isVsCpu,
+      playerWon: playerWon,
+      resultLabel: resultLabel,
+    );
+  }
+
+  Future<void> _showAnimatedGameResultDialog({
+    required BuildContext context,
+    required String result,
+    required int whiteCount,
+    required int blackCount,
+    required Color accentColor,
+    required bool isDraw,
+    required bool isVsCpu,
+    required bool playerWon,
+    required String resultLabel,
+  }) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: '対戦結果',
+      barrierColor: Colors.black.withOpacity(0.78),
+      transitionDuration: const Duration(milliseconds: 520),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return _buildGameResultDialog(
+          dialogContext,
+          result: result,
+          whiteCount: whiteCount,
+          blackCount: blackCount,
+          accentColor: accentColor,
+          isDraw: isDraw,
+          isVsCpu: isVsCpu,
+          playerWon: playerWon,
+          resultLabel: resultLabel,
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.72, end: 1).animate(curvedAnimation),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGameResultDialog(
+    BuildContext context, {
+    required String result,
+    required int whiteCount,
+    required int blackCount,
+    required Color accentColor,
+    required bool isDraw,
+    required bool isVsCpu,
+    required bool playerWon,
+    required String resultLabel,
+  }) {
+    final winnerType = whiteCount > blackCount
+        ? PieceType.white
+        : PieceType.black;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 420),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF242A50),
+              Color(0xFF10152F),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: accentColor, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withOpacity(0.24),
+              blurRadius: 28,
+              spreadRadius: 1,
+            ),
+            const BoxShadow(
+              color: Colors.black54,
+              blurRadius: 24,
+              offset: Offset(0, 14),
+            ),
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isVsCpu || playerWon || isDraw)
+                TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 850),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) => Transform.scale(
+                  scale: value,
+                  child: child,
+                ),
+                child: Container(
+                  width: 92,
+                  height: 92,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accentColor.withOpacity(0.12),
+                    border: Border.all(
+                      color: accentColor.withOpacity(0.75),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withOpacity(0.25),
+                        blurRadius: 20,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: isDraw
+                        ? Icon(
+                            Icons.balance_rounded,
+                            color: accentColor,
+                            size: 52,
+                          )
+                        : isVsCpu
+                            ? Icon(
+                                Icons.emoji_events_rounded,
+                                color: accentColor,
+                                size: 52,
+                              )
+                            : PieceWidget(
+                                piece: Piece(
+                                  id: 'result-winner',
+                                  type: winnerType,
+                                  position: const Position(0, 0),
+                                ),
+                                size: 62,
+                              ),
+                  ),
+                ),
+              ),
+              if (!isVsCpu || playerWon || isDraw)
+                const SizedBox(height: 18),
+              Text(
+                resultLabel,
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 4,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                result,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black54,
+                      blurRadius: 8,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildResultScoreCard(
+                      label: isVsCpu ? 'あなた（白）' : '白',
+                      count: whiteCount,
+                      pieceType: PieceType.white,
+                      isWinner: whiteCount > blackCount,
+                      accentColor: accentColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildResultScoreCard(
+                      label: isVsCpu ? 'CPU（黒）' : '黒',
+                      count: blackCount,
+                      pieceType: PieceType.black,
+                      isWinner: blackCount > whiteCount,
+                      accentColor: accentColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: accentColor,
+                    foregroundColor: const Color(0xFF0A0E27),
+                    elevation: 4,
+                    shadowColor: accentColor.withOpacity(0.3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    '結果を確認',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultScoreCard({
+    required String label,
+    required int count,
+    required PieceType pieceType,
+    required bool isWinner,
+    required Color accentColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: isWinner
+            ? accentColor.withOpacity(0.12)
+            : Colors.white.withOpacity(0.055),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isWinner
+              ? accentColor.withOpacity(0.7)
+              : Colors.white.withOpacity(0.12),
+        ),
+      ),
+      child: Column(
+        children: [
+          PieceWidget(
+            piece: Piece(
+              id: 'result-$label',
+              type: pieceType,
+              position: const Position(0, 0),
+            ),
+            size: 34,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: count.toDouble()),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) => Text(
+              '${value.round()}',
+              style: TextStyle(
+                color: isWinner ? accentColor : Colors.white,
+                fontSize: 28,
+                height: 1.1,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -1263,6 +2191,21 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
   
   void _handleGateSelection(GateType gate) {
+    if (_vsTutorialBlocksInteraction) return;
+    if (_vsTutorialStep == _VsTutorialStep.selectX) {
+      if (!_vsTutorialAwaitingAction) return;
+      if (gate != GateType.x) {
+        setState(() {
+          _entangledErrorMessage = '最初はXを選択して下さい。';
+        });
+        return;
+      }
+    }
+    if (_vsTutorialStep == _VsTutorialStep.selectBoard ||
+        _vsTutorialStep == _VsTutorialStep.apply) {
+      if (gate != GateType.x) return;
+    }
+
     setState(() {
       _selectedGate = gate;
       _entangledErrorMessage = null; // エラーメッセージをクリア
@@ -1284,6 +2227,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       }
       // 4マス選択や行/列選択は維持
     });
+
+    if (_vsTutorialStep == _VsTutorialStep.selectX &&
+        _vsTutorialAwaitingAction &&
+        gate == GateType.x) {
+      _scheduleVsTutorialStep(_VsTutorialStep.selectBoard);
+    }
   }
 
   bool _shouldResetSelectionForOneBitGate() {
@@ -1301,7 +2250,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     int row,
     String direction, // 'left' or 'right'
   ) {
+    if (_vsTutorialBlocksInteraction) return;
+    if (_vsTutorialStep == _VsTutorialStep.selectBoard &&
+        !_vsTutorialAwaitingAction) {
+      return;
+    }
     setState(() {
+      if (_blockIfVsTutorialRequiresXFirst()) return;
+      if (_blockIfGateRequiredFirst()) return;
       // 2ビットゲート選択時は行選択不可
       if (_selectedGate != null && _selectedGate!.isTwoBitGate) return;
       
@@ -1325,6 +2281,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _selectedPositions = [];
       }
     });
+    _onVsTutorialAfterBoardSelection(provider);
   }
   
   void _handleColumnSelection(
@@ -1333,7 +2290,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     int col,
     String direction, // 'top' or 'bottom'
   ) {
+    if (_vsTutorialBlocksInteraction) return;
+    if (_vsTutorialStep == _VsTutorialStep.selectBoard &&
+        !_vsTutorialAwaitingAction) {
+      return;
+    }
     setState(() {
+      if (_blockIfVsTutorialRequiresXFirst()) return;
+      if (_blockIfGateRequiredFirst()) return;
       // 2ビットゲート選択時は列選択不可
       if (_selectedGate != null && _selectedGate!.isTwoBitGate) return;
       
@@ -1357,6 +2321,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _selectedPositions = [];
       }
     });
+    _onVsTutorialAfterBoardSelection(provider);
   }
   
   void _handlePositionTap(
@@ -1364,7 +2329,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     GameProvider provider,
     Position position,
   ) {
+    if (_vsTutorialBlocksInteraction) return;
+    if (_vsTutorialStep == _VsTutorialStep.selectBoard &&
+        !_vsTutorialAwaitingAction) {
+      return;
+    }
     setState(() {
+      if (_blockIfVsTutorialRequiresXFirst()) return;
+      if (_blockIfGateRequiredFirst()) return;
       if (_selectedGate != null && _selectedGate!.isTwoBitGate) {
         // 2ビットゲート選択中: 2マス選択（エンタングル駒は選択不可、隣接した駒のみ選択可能）
         final piece = provider.gameState.board.getPiece(position.row, position.col);
@@ -1444,6 +2416,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         }
       }
     });
+    _onVsTutorialAfterBoardSelection(provider);
   }
   
   bool _canApplyGate() {
@@ -1629,9 +2602,35 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       targetPositions = _selectedPositions;
     }
     
+    final pauseAiForTutorial = _vsTutorialStep == _VsTutorialStep.apply &&
+        _vsTutorialAwaitingAction;
+    if (_vsTutorialStep == _VsTutorialStep.apply &&
+        !_vsTutorialAwaitingAction) {
+      return;
+    }
+    if (pauseAiForTutorial) {
+      final best = _vsTutorialBestTarget;
+      if (best != null &&
+          !VsTutorialXFlipHelper.matchesTarget(
+            best,
+            selectedRow: _selectedRow,
+            selectedColumn: _selectedColumn,
+            selectedPositions: _selectedPositions,
+          )) {
+        setState(() {
+          _entangledErrorMessage =
+              '${best.label} を選んでから適用してください';
+          _vsTutorialStep = _VsTutorialStep.selectBoard;
+          _vsTutorialAwaitingAction = true;
+        });
+        return;
+      }
+    }
+
     final success = await provider.applyGate(
       _selectedGate!,
       targetPositions,
+      processAi: !pauseAiForTutorial,
     );
     
     if (success) {
@@ -1643,7 +2642,32 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _selectedRowDirection = null;
         _selectedColumnDirection = null;
       });
+      if (pauseAiForTutorial) {
+        _scheduleVsTutorialStep(_VsTutorialStep.explainForbidden);
+      }
     }
   }
+}
+
+class _VsTutorialOverlayConfig {
+  const _VsTutorialOverlayConfig({
+    this.key,
+    this.targetRect,
+    required this.message,
+    required this.nextLabel,
+    required this.onNext,
+    this.scale = 1.15,
+    this.highlightPadding = 0,
+    this.borderWidth = 2,
+  });
+
+  final GlobalKey? key;
+  final Rect? targetRect;
+  final String message;
+  final String nextLabel;
+  final VoidCallback onNext;
+  final double scale;
+  final double highlightPadding;
+  final double borderWidth;
 }
 

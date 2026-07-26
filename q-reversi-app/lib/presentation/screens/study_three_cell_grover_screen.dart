@@ -656,17 +656,8 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
 
   void _measure() {
     if (!_sequenceCompleted || _measured) return;
-    final probs = _probabilities;
-    final r = math.Random().nextDouble();
-    double acc = 0;
-    int picked = 0;
-    for (int i = 0; i < probs.length; i++) {
-      acc += probs[i];
-      if (r <= acc) {
-        picked = i;
-        break;
-      }
-    }
+    // 手順どおり完了した場合は、表示上は約95%でも学習体験として必ず |111⟩ を出す。
+    const picked = 7; // |111⟩
 
     setState(() {
       _amplitudes = List<QComplex>.generate(
@@ -1073,7 +1064,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                                                   expandedW,
                                                             )
                                                             .toDouble();
-                                                    final highlightTop =
+                                                    const highlightTop =
                                                         topPad + verticalNudge;
                                                     final highlightBottom =
                                                         (bottomPad -
@@ -1150,7 +1141,7 @@ class _StudyThreeCellGroverScreenState extends State<StudyThreeCellGroverScreen>
                                               barW * (horizontalExpandFactor - 1))
                                           .clamp(leftPad, leftPad + chartW - expandedW)
                                           .toDouble();
-                                      final highlightTop = topPad + verticalNudge;
+                                      const highlightTop = topPad + verticalNudge;
                                       final highlightBottom = (bottomPad - verticalNudge)
                                           .clamp(0.0, constraints.maxHeight)
                                           .toDouble();

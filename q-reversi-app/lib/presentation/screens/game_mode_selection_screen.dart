@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_mode.dart';
+import '../../domain/services/challenge_progress_service.dart';
 import '../../domain/services/tutorial_progress_service.dart';
 import 'vs_mode_setup_screen.dart';
 import 'game_screen.dart';
@@ -12,6 +13,7 @@ import '../../domain/entities/game_state.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
+import '../widgets/operation_order_settings_dialog.dart';
 
 /// ゲームモード選択画面
 class GameModeSelectionScreen extends StatefulWidget {
@@ -23,8 +25,11 @@ class GameModeSelectionScreen extends StatefulWidget {
 
 class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
   final TutorialProgressService _progressService = TutorialProgressService();
+  final ChallengeProgressService _challengeProgressService =
+      ChallengeProgressService();
   final VsGamePersistenceService _vsPersistence = VsGamePersistenceService();
   bool _isTutorialCompleted = false;
+  bool _isStage0RequirementMet = false;
   bool _isLoading = true;
 
   @override
@@ -39,15 +44,19 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
       if (mounted) {
         setState(() {
           _isTutorialCompleted = true;
+          _isStage0RequirementMet = true;
           _isLoading = false;
         });
       }
       return;
     }
-    final isCompleted = await _progressService.isTutorialCompletedOrSkipped();
+    final isTutorialCompleted =
+        await _progressService.isTutorialCompletedOrSkipped();
+    final challengeProgress = await _challengeProgressService.loadProgress();
     if (mounted) {
       setState(() {
-        _isTutorialCompleted = isCompleted;
+        _isTutorialCompleted = isTutorialCompleted;
+        _isStage0RequirementMet = challengeProgress.isStage0RequirementMet();
         _isLoading = false;
       });
     }
@@ -98,6 +107,13 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
         foregroundColor: Colors.white,
         centerTitle: true,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: '操作設定',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => showOperationOrderSettingsDialog(context),
+          ),
+        ],
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -120,14 +136,24 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 'ゲームの遊び方説明',
                 Icons.menu_book,
                 () async {
-                  await Navigator.push(
+                  final result = await Navigator.push<String>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const TutorialScreen(),
                     ),
                   );
                   // チュートリアル画面から戻ってきたら状態を再確認
-                  _checkTutorialStatus();
+                  await _checkTutorialStatus();
+                  if (!mounted) return;
+                  if (result == TutorialScreen.resultOpenChallenge) {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ChallengeFlowScope(),
+                      ),
+                    );
+                    await _checkTutorialStatus();
+                  }
                 },
                 enabled: true,
               ),
@@ -137,13 +163,14 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 'チャレンジモード',
                 '特定の量子状態を作るパズルゲーム',
                 Icons.flag,
-                () {
-                  Navigator.push(
+                () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ChallengeFlowScope(),
                     ),
                   );
+                  await _checkTutorialStatus();
                 },
                 enabled: _isTutorialCompleted,
               ),
@@ -154,7 +181,8 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 '2人対戦のモード',
                 Icons.people,
                 () => _openVsMode(context),
-                enabled: _isTutorialCompleted,
+                enabled: _isStage0RequirementMet,
+                onDisabledTap: _showStage0LockedMessage,
               ),
               const SizedBox(height: 16),
               _buildModeCard(
@@ -165,7 +193,8 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 () {
                   _startFreeRunMode(context);
                 },
-                enabled: _isTutorialCompleted,
+                enabled: _isStage0RequirementMet,
+                onDisabledTap: _showStage0LockedMessage,
               ),
               const SizedBox(height: 16),
               _buildModeCard(
@@ -181,11 +210,23 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                     ),
                   );
                 },
-                enabled: _isTutorialCompleted,
+                enabled: _isStage0RequirementMet,
+                onDisabledTap: _showStage0LockedMessage,
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showStage0LockedMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'チャレンジモードのステージ0をクリアすると、このモードが解放されます',
+        ),
+        duration: Duration(seconds: 2),
       ),
     );
   }

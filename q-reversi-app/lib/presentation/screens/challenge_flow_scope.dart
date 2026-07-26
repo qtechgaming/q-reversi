@@ -12,7 +12,7 @@ class ChallengeFlowScope extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ChallengeProgressNotifier(),
-      child: Navigator(
+      child: const Navigator(
         initialRoute: _selectionRoute,
         onGenerateRoute: _onGenerateRoute,
       ),

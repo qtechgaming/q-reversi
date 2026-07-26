@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/game_constants.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/entities/piece.dart';
 import '../../domain/entities/position.dart';
@@ -19,6 +20,8 @@ class BoardWidget extends StatelessWidget {
   final Board board;
   final List<Position> selectedPositions;
   final List<Position> highlightedPositions;
+  /// チュートリアル等の候補マス（選択ハイライトとは別表現）
+  final List<Position> suggestedPositions;
   final List<Position> lastTwoBitGatePositions; // 最後に適用された2ビットゲートの位置
   final Function(Position)? onPositionTap;
   final Function(int, String)? onRowSelected; // String: 'left' or 'right'
@@ -31,6 +34,10 @@ class BoardWidget extends StatelessWidget {
   final GateType? selectedGate;
   final Map<int, bool>? selectedRows;
   final Map<int, bool>? selectedColumns;
+  /// チュートリアル等の候補行（選択の緑ハイライトとは別表現）
+  final Map<int, bool>? suggestedRows;
+  /// チュートリアル等の候補列
+  final Map<int, bool>? suggestedColumns;
   final List<ForbiddenArea>? forbiddenAreas; // 禁止領域のリスト
   final double cellSize;
   final Map<String, GlobalKey>? customKeys; // カスタムキー（列選択ボタン、行選択ボタン、盤面セル用）
@@ -42,6 +49,7 @@ class BoardWidget extends StatelessWidget {
     required this.board,
     this.selectedPositions = const [],
     this.highlightedPositions = const [],
+    this.suggestedPositions = const [],
     this.lastTwoBitGatePositions = const [],
     this.onPositionTap,
     this.onRowSelected,
@@ -52,6 +60,8 @@ class BoardWidget extends StatelessWidget {
     this.selectedGate,
     this.selectedRows,
     this.selectedColumns,
+    this.suggestedRows,
+    this.suggestedColumns,
     this.forbiddenAreas,
     this.cellSize = 50,
     this.customKeys,
@@ -98,15 +108,81 @@ class BoardWidget extends StatelessWidget {
     }
     return false;
   }
-  
+
+  /// 2ビットゲートの2駒目選択中か（1駒目のみ選択済み）
+  bool get _isPickingTwoBitSecond =>
+      selectedGate != null &&
+      selectedGate!.isTwoBitGate &&
+      selectedPositions.length == 1;
+
+  /// 2駒目として選べないマスか（隣接以外）。禁止領域とは別表現（ハッチ）にする。
+  bool _isNonAdjacentForTwoBitSecond(Position position) {
+    if (!_isPickingTwoBitSecond) return false;
+    if (selectedPositions.contains(position)) return false;
+    return !position.isAdjacent(selectedPositions.first);
+  }
+
+  ButtonStyle _rowColumnButtonStyle({
+    required bool isSelected,
+    required bool isSuggested,
+  }) {
+    final isTwoBit = selectedGate != null && selectedGate!.isTwoBitGate;
+    Color borderColor;
+    if (isTwoBit) {
+      borderColor = Colors.transparent;
+    } else if (isSelected) {
+      borderColor = const Color(0xFF4CAF50);
+    } else if (isSuggested) {
+      borderColor = Colors.white;
+    } else {
+      borderColor = const Color(0xFF8B4513);
+    }
+
+    Color backgroundColor;
+    if (isTwoBit) {
+      backgroundColor = Colors.transparent;
+    } else {
+      // 候補も通常色のまま。強調は白枠＋（ガイド時は）周囲暗幕の切り抜き
+      backgroundColor = const Color(0xFFDEB887);
+    }
+
+    return ButtonStyle(
+      padding: WidgetStateProperty.all(EdgeInsets.zero),
+      backgroundColor: WidgetStateProperty.all(backgroundColor),
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const Color(0xFF8B4513).withOpacity(0.5);
+        }
+        if (isSelected) return Colors.white;
+        return const Color(0xFF8B4513);
+      }),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: BorderSide(
+            color: borderColor,
+            width: isSuggested && !isSelected ? 3 : 2,
+          ),
+        ),
+      ),
+      elevation: WidgetStateProperty.all(
+        isSelected ? 4 : 0,
+      ),
+    );
+  }
   
   @override
   Widget build(BuildContext context) {
+    // 縦横一列ボタンを含む盤面全体の外周（2bit選択時も消えない）
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFBDBDBD), // 明るめのグレー（試用）
+          width: 4,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -121,6 +197,7 @@ class BoardWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(board.cols, (col) {
                     final isSelected = selectedColumns?[col] ?? false;
+                    final isSuggested = suggestedColumns?[col] ?? false;
                     final isForbidden = _isColumnForbidden(col);
                     // 禁止領域の列ボタンは非表示
                     if (isForbidden) {
@@ -143,37 +220,9 @@ class BoardWidget extends StatelessWidget {
                                 !isForbidden
                             ? () => onColumnSelected?.call(col, 'top')
                             : null,
-                        style: ButtonStyle(
-                          padding: WidgetStateProperty.all(EdgeInsets.zero),
-                          backgroundColor: WidgetStateProperty.all(
-                            (selectedGate != null && selectedGate!.isTwoBitGate)
-                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                          ),
-                          foregroundColor:
-                              WidgetStateProperty.resolveWith((states) {
-                            if (states.contains(WidgetState.disabled)) {
-                              return const Color(0xFF8B4513).withOpacity(0.5);
-                            }
-                            return isSelected
-                                ? Colors.white
-                                : const Color(0xFF8B4513);
-                          }),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(
-                                color: (selectedGate != null &&
-                                        selectedGate!.isTwoBitGate)
-                                    ? Colors.white
-                                    : (isSelected
-                                        ? const Color(0xFF4CAF50)
-                                        : const Color(0xFF8B4513)),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        style: _rowColumnButtonStyle(
+                          isSelected: isSelected,
+                          isSuggested: isSuggested,
                         ),
                         child: const SizedBox.shrink(),
                       ),
@@ -196,6 +245,7 @@ class BoardWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(board.rows, (row) {
                     final isSelected = selectedRows?[row] ?? false;
+                    final isSuggested = suggestedRows?[row] ?? false;
                     final isForbidden = _isRowForbidden(row);
                     // 禁止領域の行ボタンは非表示
                     if (isForbidden) {
@@ -217,35 +267,9 @@ class BoardWidget extends StatelessWidget {
                                 !isForbidden
                             ? () => onRowSelected?.call(row, 'left')
                             : null,
-                        style: ButtonStyle(
-                          padding: WidgetStateProperty.all(EdgeInsets.zero),
-                          backgroundColor: WidgetStateProperty.all(
-                            (selectedGate != null && selectedGate!.isTwoBitGate)
-                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                          ),
-                          foregroundColor: WidgetStateProperty.resolveWith((states) {
-                            if (states.contains(WidgetState.disabled)) {
-                              return const Color(0xFF8B4513).withOpacity(0.5);
-                            }
-                            return isSelected
-                                ? Colors.white
-                                : const Color(0xFF8B4513);
-                          }),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(
-                                color: (selectedGate != null && selectedGate!.isTwoBitGate)
-                                    ? Colors.white
-                                    : (isSelected
-                                        ? const Color(0xFF4CAF50)
-                                        : const Color(0xFF8B4513)),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        style: _rowColumnButtonStyle(
+                          isSelected: isSelected,
+                          isSuggested: isSuggested,
                         ),
                         child: const SizedBox.shrink(),
                       ),
@@ -262,17 +286,25 @@ class BoardWidget extends StatelessWidget {
                       final position = Position(row, col);
                       final piece = board.getPiece(row, col);
                       final isSelected = selectedPositions.contains(position);
-                      final isHighlighted = highlightedPositions.contains(position);
+                      // 2ビット時の隣接オレンジは出さない（1ビット適用対象と紛らわしい／2駒選択後も残る）
+                      final isHighlighted = highlightedPositions.contains(position) &&
+                          !(selectedGate != null && selectedGate!.isTwoBitGate);
+                      final isSuggested = suggestedPositions.contains(position) &&
+                          !isSelected;
                       final isLastTwoBitGate = lastTwoBitGatePositions.contains(position);
                       final isForbidden = _isPositionForbidden(position);
+                      final isNonAdjacentForTwoBit =
+                          _isNonAdjacentForTwoBitSecond(position);
                       
                       // 2ビットゲートの場合、1駒目と2駒目を区別
                       final selectedIndex = selectedPositions.indexOf(position);
                       final isFirstPiece = selectedIndex == 0;
+                      final isSecondPiece = selectedIndex == 1;
                       // 2ビットゲートで2マス選択の場合のみ1駒目と2駒目を区別
                       final isTwoBitGateSelection = selectedGate != null &&
                           selectedGate!.isTwoBitGate &&
                           selectedPositions.length == 2;
+                      const twoBitSecondColor = Color(GameConstants.cyan);
                       
                       final cellKey = customKeys?['cell_${row}_$col'];
                       return GestureDetector(
@@ -282,73 +314,92 @@ class BoardWidget extends StatelessWidget {
                           width: cellSize,
                           height: cellSize,
                           margin: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: isForbidden
-                                ? Colors.grey.withOpacity(0.5) // 禁止領域はグレーアウト
-                                : isLastTwoBitGate
-                                    ? Colors.cyan.withOpacity(0.5) // 最後に適用された2ビットゲートの位置はシアンでハイライト
-                                    : isSelected
-                                        ? (isTwoBitGateSelection
-                                            ? (isFirstPiece
-                                                ? Colors.orange.withOpacity(0.6)
-                                                : Colors.blue.withOpacity(0.6))
-                                            : Colors.orange.withOpacity(0.5))
-                                        : isHighlighted
-                                            ? Colors.orange.withOpacity(0.5)
-                                            : const Color(0xFF4CAF50), // 緑色の背景
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: isForbidden
-                                  ? Colors.grey // 禁止領域はグレーの枠線
-                                  : isLastTwoBitGate
-                                      ? Colors.cyan // 最後に適用された2ビットゲートの位置はシアンの枠線
-                                      : isSelected
-                                          ? (isTwoBitGateSelection
-                                              ? (isFirstPiece
-                                                  ? Colors.orange
-                                                  : Colors.blue)
-                                              : Colors.orange)
-                                          : isHighlighted
-                                              ? Colors.orange
-                                              : const Color(0xFF4CAF50), // 緑色の枠線
-                              width: isLastTwoBitGate
-                                  ? 3 // 最後に適用された2ビットゲートの位置は太い枠線
-                                  : isSelected
-                                      ? 3
-                                      : (isHighlighted ? 3 : 3),
-                            ),
-                            boxShadow: (isSelected || isHighlighted) && !isForbidden
-                                ? [
-                                    BoxShadow(
-                                      color: (isTwoBitGateSelection && isSelected
-                                          ? (isFirstPiece
-                                              ? Colors.orange
-                                              : Colors.blue)
-                                          : Colors.orange).withOpacity(0.6),
-                                      blurRadius: 8,
-                                      spreadRadius: 2,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: isForbidden
+                                      ? Colors.grey.withOpacity(0.5) // 禁止領域はグレーアウト
+                                      : isLastTwoBitGate
+                                          ? Colors.cyan.withOpacity(0.5)
+                                          : isSelected
+                                              ? (isTwoBitGateSelection
+                                                  ? (isFirstPiece
+                                                      ? Colors.orange.withOpacity(0.6)
+                                                      : twoBitSecondColor.withOpacity(0.6))
+                                                  : Colors.orange.withOpacity(0.5))
+                                              : isHighlighted
+                                                  ? Colors.orange.withOpacity(0.5)
+                                                  : const Color(0xFF4CAF50),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isForbidden
+                                        ? Colors.grey
+                                        : isLastTwoBitGate
+                                            ? Colors.cyan
+                                            : isSelected
+                                                ? (isTwoBitGateSelection
+                                                    ? (isFirstPiece
+                                                        ? Colors.orange
+                                                        : twoBitSecondColor)
+                                                    : Colors.orange)
+                                                : isHighlighted
+                                                    ? Colors.orange
+                                                    : isSuggested
+                                                        ? Colors.white
+                                                        : const Color(0xFF4CAF50),
+                                    width: isSuggested ? 3.5 : 3,
+                                  ),
+                                  boxShadow:
+                                      (isSelected || isHighlighted) && !isForbidden
+                                          ? [
+                                              BoxShadow(
+                                                color: (isTwoBitGateSelection &&
+                                                            isSecondPiece
+                                                        ? twoBitSecondColor
+                                                        : Colors.orange)
+                                                    .withOpacity(0.6),
+                                                blurRadius: 8,
+                                                spreadRadius: 2,
+                                              ),
+                                            ]
+                                          : null,
+                                ),
+                                child: piece != null
+                                    ? Opacity(
+                                        opacity: isForbidden ? 0.5 : 1.0,
+                                        child: pieceBuilder != null
+                                            ? pieceBuilder!(
+                                                piece,
+                                                cellSize - 8,
+                                                // 2駒目も選択扱い → 駒枠は水色（GameConstants.cyan）
+                                                isSelected: isSelected,
+                                                isHighlighted: isHighlighted,
+                                              )
+                                            : PieceWidget(
+                                                piece: piece,
+                                                isSelected: isSelected,
+                                                isHighlighted: isHighlighted,
+                                                size: cellSize - 8,
+                                              ),
+                                      )
+                                    : null,
+                              ),
+                              // 2bit隣接外（1駒目のみ選択時）: 斜線ではなく塗りつぶしグレー（全体に50%）
+                              if (isNonAdjacentForTwoBit)
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.50),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
-                                  ]
-                                : null,
+                                  ),
+                                ),
+                            ],
                           ),
-                          child: piece != null
-                              ? Opacity(
-                                  opacity: isForbidden ? 0.5 : 1.0, // 禁止領域は半透明
-                                  child: pieceBuilder != null
-                                      ? pieceBuilder!(
-                                          piece,
-                                          cellSize - 8,
-                                          isSelected: isSelected,
-                                          isHighlighted: isHighlighted,
-                                        )
-                                      : PieceWidget(
-                                          piece: piece,
-                                          isSelected: isSelected,
-                                          isHighlighted: isHighlighted,
-                                          size: cellSize - 8,
-                                        ),
-                                )
-                              : null,
                         ),
                       );
                     }),
@@ -362,6 +413,7 @@ class BoardWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(board.rows, (row) {
                     final isSelected = selectedRows?[row] ?? false;
+                    final isSuggested = suggestedRows?[row] ?? false;
                     final isForbidden = _isRowForbidden(row);
                     // 禁止領域の行ボタンは非表示
                     if (isForbidden) {
@@ -381,35 +433,9 @@ class BoardWidget extends StatelessWidget {
                                 !isForbidden
                             ? () => onRowSelected?.call(row, 'right')
                             : null,
-                        style: ButtonStyle(
-                          padding: WidgetStateProperty.all(EdgeInsets.zero),
-                          backgroundColor: WidgetStateProperty.all(
-                            (selectedGate != null && selectedGate!.isTwoBitGate)
-                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                          ),
-                          foregroundColor: WidgetStateProperty.resolveWith((states) {
-                            if (states.contains(WidgetState.disabled)) {
-                              return const Color(0xFF8B4513).withOpacity(0.5);
-                            }
-                            return isSelected
-                                ? Colors.white
-                                : const Color(0xFF8B4513);
-                          }),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(
-                                color: (selectedGate != null && selectedGate!.isTwoBitGate)
-                                    ? Colors.white
-                                    : (isSelected
-                                        ? const Color(0xFF4CAF50)
-                                        : const Color(0xFF8B4513)),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        style: _rowColumnButtonStyle(
+                          isSelected: isSelected,
+                          isSuggested: isSuggested,
                         ),
                         child: const SizedBox.shrink(),
                       ),
@@ -429,6 +455,7 @@ class BoardWidget extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(board.cols, (col) {
                     final isSelected = selectedColumns?[col] ?? false;
+                    final isSuggested = suggestedColumns?[col] ?? false;
                     final isForbidden = _isColumnForbidden(col);
                     // 禁止領域の列ボタンは非表示
                     if (isForbidden) {
@@ -449,37 +476,9 @@ class BoardWidget extends StatelessWidget {
                                 !isForbidden
                             ? () => onColumnSelected?.call(col, 'bottom')
                             : null,
-                        style: ButtonStyle(
-                          padding: WidgetStateProperty.all(EdgeInsets.zero),
-                          backgroundColor: WidgetStateProperty.all(
-                            (selectedGate != null && selectedGate!.isTwoBitGate)
-                                ? Colors.transparent // 2ビットゲート選択時は背景色無し
-                                : const Color(0xFFDEB887), // 盤面の背景色と同じ
-                          ),
-                          foregroundColor:
-                              WidgetStateProperty.resolveWith((states) {
-                            if (states.contains(WidgetState.disabled)) {
-                              return const Color(0xFF8B4513).withOpacity(0.5);
-                            }
-                            return isSelected
-                                ? Colors.white
-                                : const Color(0xFF8B4513);
-                          }),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                              side: BorderSide(
-                                color: (selectedGate != null &&
-                                        selectedGate!.isTwoBitGate)
-                                    ? Colors.white
-                                    : (isSelected
-                                        ? const Color(0xFF4CAF50)
-                                        : const Color(0xFF8B4513)),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          elevation: WidgetStateProperty.all(isSelected ? 4 : 0),
+                        style: _rowColumnButtonStyle(
+                          isSelected: isSelected,
+                          isSuggested: isSuggested,
                         ),
                         child: const SizedBox.shrink(),
                       ),

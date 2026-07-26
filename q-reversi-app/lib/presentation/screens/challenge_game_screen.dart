@@ -10,10 +10,13 @@ import '../../domain/entities/challenge_progress.dart';
 import '../../domain/entities/board.dart';
 import '../../domain/services/challenge_game_service.dart';
 import '../../domain/services/challenge_level_loader.dart';
+import '../../domain/services/operation_order_preference_service.dart';
 import '../providers/challenge_progress_notifier.dart';
 import '../providers/game_provider.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/gate_button.dart';
+import '../widgets/operation_order_settings_dialog.dart';
+import 'challenge_stage_advance_result.dart';
 
 /// チャレンジゲーム画面
 class ChallengeGameScreen extends StatefulWidget {
@@ -50,6 +53,8 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
   List<ChallengeLevel> _allLevels = const [];
   int _guideStepIndex = 0;
   List<_GuideStep> _guideSteps = const [];
+  /// true のとき従来どおりゲート／盤面を順不同で選択できる
+  bool _allowFreeSelectionOrder = false;
   final GlobalKey _goalConditionKey = GlobalKey();
   final GlobalKey _xGateButtonKey = GlobalKey();
   final GlobalKey _boardAreaKey = GlobalKey();
@@ -61,12 +66,30 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
 
   final ChallengeGameService _challengeService = ChallengeGameService();
   final ChallengeLevelLoader _levelLoader = ChallengeLevelLoader();
+  final _operationOrderPrefs = OperationOrderPreferenceService();
 
   @override
   void initState() {
     super.initState();
     _loadSwipePreviewData();
+    _loadOperationOrderPreference();
     _maybeShowGuide();
+  }
+
+  Future<void> _loadOperationOrderPreference() async {
+    final allowFree = await _operationOrderPrefs.isFreeSelectionOrderEnabled();
+    if (!mounted) return;
+    setState(() {
+      _allowFreeSelectionOrder = allowFree;
+    });
+  }
+
+  Future<void> _openOperationOrderSettings() async {
+    final result = await showOperationOrderSettingsDialog(context);
+    if (!mounted || result == null) return;
+    setState(() {
+      _allowFreeSelectionOrder = result;
+    });
   }
 
   @override
@@ -181,16 +204,23 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
 
   Widget _buildGuideOverlay(Rect targetRect) {
     final screenSize = MediaQuery.of(context).size;
-    final center = targetRect.center;
+    // 3番目（盤面）は実寸、それ以外は約1.2倍
+    final scale = _guideStepIndex == 2 ? 1.0 : 1.2;
+    final highlightRect = Rect.fromCenter(
+      center: targetRect.center,
+      width: targetRect.width * scale,
+      height: targetRect.height * scale,
+    );
+    final center = highlightRect.center;
     const bubbleWidth = 300.0;
     const bubbleHeight = 132.0;
     final left = (center.dx - bubbleWidth / 2)
         .clamp(12.0, screenSize.width - bubbleWidth - 12.0)
         .toDouble();
-    final top = (targetRect.bottom + 12.0 + bubbleHeight < screenSize.height)
-        ? (targetRect.bottom + 12.0)
-        : (targetRect.top - bubbleHeight - 12.0);
-    final isBubbleAbove = top < targetRect.top;
+    final top = (highlightRect.bottom + 12.0 + bubbleHeight < screenSize.height)
+        ? (highlightRect.bottom + 12.0)
+        : (highlightRect.top - bubbleHeight - 12.0);
+    final isBubbleAbove = top < highlightRect.top;
     final connectorX = (center.dx - left).clamp(14.0, bubbleWidth - 14.0).toDouble();
 
     return Stack(
@@ -199,19 +229,27 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
           child: GestureDetector(
             onTap: _nextGuideStep,
             behavior: HitTestBehavior.opaque,
-            child: Container(color: Colors.black45),
+            child: ClipPath(
+              clipper: _GuideHighlightCutoutClipper(
+                targetRect: highlightRect,
+                borderRadius: 12,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Container(color: Colors.black54),
+            ),
           ),
         ),
         Positioned(
-          left: targetRect.left + 2,
-          top: targetRect.top + 2,
+          left: highlightRect.left,
+          top: highlightRect.top,
           child: IgnorePointer(
             child: Container(
-              width: targetRect.width - 4,
-              height: targetRect.height - 4,
+              width: highlightRect.width,
+              height: highlightRect.height,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xCCFFFFFF), width: 1.2),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 2),
               ),
             ),
           ),
@@ -314,11 +352,18 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            'レベル ${widget.level.level}',
+            'レベル ${widget.level.displayLabel}',
             style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: const Color(0xFF1A1F3A),
           foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              tooltip: '操作設定',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: _openOperationOrderSettings,
+            ),
+          ],
         ),
         body: GestureDetector(
           behavior: HitTestBehavior.translucent,
@@ -453,11 +498,8 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     });
 
     // 右方向スワイプ: 前のレベル、左方向スワイプ: 次のレベル
-    final targetLevelNumber = dragDistance > 0
-        ? widget.level.level - 1
-        : widget.level.level + 1;
-
-    final didNavigate = await _navigateToUnlockedLevel(targetLevelNumber);
+    final direction = dragDistance > 0 ? -1 : 1;
+    final didNavigate = await _navigateAdjacentLevel(direction);
     if (!didNavigate && mounted) {
       setState(() {
         _horizontalDragOffset = 0;
@@ -466,38 +508,49 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     }
   }
 
-  Future<bool> _navigateToUnlockedLevel(int targetLevelNumber) async {
-    if (targetLevelNumber < 1) return false;
-
+  Future<bool> _navigateAdjacentLevel(int direction) async {
     final allLevels = await _levelLoader.loadAllLevels();
-    ChallengeLevel? targetLevel;
-    for (final level in allLevels) {
-      if (level.level == targetLevelNumber) {
-        targetLevel = level;
-        break;
-      }
+    final ordered = ChallengeLevel.orderedForProgression(allLevels);
+    final currentIndex =
+        ordered.indexWhere((level) => level.level == widget.level.level);
+    final targetIndex = currentIndex + direction;
+    if (currentIndex < 0 ||
+        targetIndex < 0 ||
+        targetIndex >= ordered.length) {
+      return false;
     }
-    if (targetLevel == null) return false;
+
+    final targetLevel = ordered[targetIndex];
     if (!mounted) return false;
 
     final progressManager =
         context.read<ChallengeProgressNotifier>().progress;
     if (!progressManager.isLevelUnlocked(targetLevel.level)) return false;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => ChallengeGameScreen(level: targetLevel!),
-      ),
+    // 選択画面のプレイループを維持するため pushReplacement は使わない
+    Navigator.of(context).pop(
+      ChallengeContinueToLevelResult(targetLevel),
     );
     return true;
+  }
+
+  ChallengeLevel? _adjacentLevel(int direction) {
+    final ordered = ChallengeLevel.orderedForProgression(_allLevels);
+    final currentIndex =
+        ordered.indexWhere((level) => level.level == widget.level.level);
+    final targetIndex = currentIndex + direction;
+    if (currentIndex < 0 ||
+        targetIndex < 0 ||
+        targetIndex >= ordered.length) {
+      return null;
+    }
+    return ordered[targetIndex];
   }
 
   Widget _buildSwipePreview(ChallengeProgressManager progressManager) {
     if (_horizontalDragOffset == 0) return const SizedBox.shrink();
 
-    final targetLevelNumber = _horizontalDragOffset > 0
-        ? widget.level.level - 1
-        : widget.level.level + 1;
-    final level = _findLevelByNumber(targetLevelNumber);
+    final direction = _horizontalDragOffset > 0 ? -1 : 1;
+    final level = _adjacentLevel(direction);
     if (level == null) return const SizedBox.shrink();
 
     final isUnlocked = progressManager.isLevelUnlocked(level.level);
@@ -528,6 +581,15 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
                   fontSize: 28,
                 ),
               ),
+              const SizedBox(height: 6),
+              Text(
+                'レベル ${level.displayLabel}',
+                style: TextStyle(
+                  color: isUnlocked ? Colors.white : Colors.white54,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
               if (level.comment.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -545,13 +607,6 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
         ),
       ),
     );
-  }
-
-  ChallengeLevel? _findLevelByNumber(int levelNumber) {
-    for (final level in _allLevels) {
-      if (level.level == levelNumber) return level;
-    }
-    return null;
   }
 
   Widget _buildLevelInfo(BuildContext context, GameState state) {
@@ -650,9 +705,11 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
             ),
           if (_entangledErrorMessage == null) ...[
             if (_selectedGate == null)
-              const Text(
-                'ゲートを選択してください',
-                style: TextStyle(color: Colors.white70),
+              Text(
+                _allowFreeSelectionOrder
+                    ? 'ゲートまたは盤面を選択してください'
+                    : '先にゲートを選択してください',
+                style: const TextStyle(color: Colors.white70),
               ),
             if (_selectedGate != null && _selectedGate!.isTwoBitGate)
               Text(
@@ -898,6 +955,13 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     int row,
     int col,
   ) {
+    if (!_allowFreeSelectionOrder && _selectedGate == null) {
+      setState(() {
+        _entangledErrorMessage = '先にゲートを選択してください';
+      });
+      return;
+    }
+
     setState(() {
       _entangledErrorMessage = null;
     });
@@ -1029,6 +1093,12 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     GameProvider provider,
     int row,
   ) {
+    if (!_allowFreeSelectionOrder && _selectedGate == null) {
+      setState(() {
+        _entangledErrorMessage = '先にゲートを選択してください';
+      });
+      return;
+    }
     // 2ビットゲート選択時は行選択不可
     if (_selectedGate != null && _selectedGate!.isTwoBitGate) return;
 
@@ -1050,6 +1120,12 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     GameProvider provider,
     int col,
   ) {
+    if (!_allowFreeSelectionOrder && _selectedGate == null) {
+      setState(() {
+        _entangledErrorMessage = '先にゲートを選択してください';
+      });
+      return;
+    }
     // 2ビットゲート選択時は列選択不可
     if (_selectedGate != null && _selectedGate!.isTwoBitGate) return;
 
@@ -1141,23 +1217,21 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     );
 
     if (mounted) {
-      final nextLevel = await _findNextLevelInStage();
+      final nextLevel = await _findNextLevel();
       _showVictoryDialog(context, stars, turnsUsed, nextLevel);
     }
   }
 
-  Future<ChallengeLevel?> _findNextLevelInStage() async {
+  /// 次のレベルを取得（進行順: ステージ0 → 本編）
+  Future<ChallengeLevel?> _findNextLevel() async {
     final allLevels = await _levelLoader.loadAllLevels();
-    final nextLevelNumber = widget.level.level + 1;
-
-    for (final level in allLevels) {
-      if (level.level == nextLevelNumber &&
-          level.stageNumber == widget.level.stageNumber) {
-        return level;
-      }
+    final ordered = ChallengeLevel.orderedForProgression(allLevels);
+    final currentIndex =
+        ordered.indexWhere((level) => level.level == widget.level.level);
+    if (currentIndex < 0 || currentIndex >= ordered.length - 1) {
+      return null;
     }
-
-    return null;
+    return ordered[currentIndex + 1];
   }
 
   int _calculateStars(int turnsUsed, int optimalTurns) {
@@ -1189,7 +1263,7 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'レベル ${widget.level.level} をクリアしました！',
+              'レベル ${widget.level.displayLabel} をクリアしました！',
               style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
@@ -1274,11 +1348,23 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
       if (!mounted) return;
 
       if (value == 'next' && nextLevel != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ChallengeGameScreen(level: nextLevel),
-          ),
-        );
+        final isStageTransition =
+            nextLevel.stageNumber != widget.level.stageNumber;
+        if (isStageTransition) {
+          // ステージ選択画面に戻り、次ステージ全体を見せてから先頭レベルを開く
+          Navigator.of(context).pop(
+            ChallengeStageAdvanceResult(
+              completedStageNumber: widget.level.stageNumber,
+              nextStageNumber: nextLevel.stageNumber,
+              firstLevel: nextLevel,
+            ),
+          );
+        } else {
+          // pushReplacement だと選択画面の await が途切れるため、pop で継続する
+          Navigator.of(context).pop(
+            ChallengeContinueToLevelResult(nextLevel),
+          );
+        }
         return;
       }
 
@@ -1319,6 +1405,36 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     }
 
     return adjacentPositions;
+  }
+}
+
+/// ガイド用: 暗幕からハイライト領域を切り抜く
+class _GuideHighlightCutoutClipper extends CustomClipper<Path> {
+  const _GuideHighlightCutoutClipper({
+    required this.targetRect,
+    required this.borderRadius,
+  });
+
+  final Rect targetRect;
+  final double borderRadius;
+
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          targetRect,
+          Radius.circular(borderRadius),
+        ),
+      );
+  }
+
+  @override
+  bool shouldReclip(covariant _GuideHighlightCutoutClipper oldClipper) {
+    return oldClipper.targetRect != targetRect ||
+        oldClipper.borderRadius != borderRadius;
   }
 }
 

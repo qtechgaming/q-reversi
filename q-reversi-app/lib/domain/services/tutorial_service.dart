@@ -165,7 +165,7 @@ class TutorialService {
       'Yゲート',
       'SWAPゲート',
       'CNOTゲート',
-      'ゲート習得完了',
+      'ゲート説明完了',
     ];
 
     final slideById = <String, TutorialSlide>{};
@@ -470,8 +470,9 @@ class TutorialService {
           TutorialSlide(
             slideId: 'gate_mastery_complete-1',
             texts: [
-              'チュートリアルはこれで完了です。',
-              'チャレンジモード、VSモード、そしてスタディモードを通じて、楽しく量子コンピュータの計算の世界に触れてみてください。',
+              '基本操作の説明はこれで完了です。',
+              '続きはチャレンジモードの「ステージ0」で、実際に手を動かしながら練習できます。',
+              '下の「チャレンジへ」から、チュートリアルの続きを始めましょう。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.image,
@@ -561,7 +562,7 @@ class TutorialService {
             slideId: 'finish-1',
             texts: [
               '量子コンピュータでは、重ね合わせとエンタングルメントをうまく回路の中で使うことで、高速な計算が可能になるのです。',
-              'スタディモードの次のステップに進んで、量子コンピュータと量子アルゴリズムの一端を感じてみてください...!',
+              'まずはチャレンジモードのステージ0（チュートリアルの続き）で操作を固め、クリア後は本編ステージへ進んでみてください。',
             ],
             visualElement: TutorialVisualElement(
               type: VisualElementType.board,

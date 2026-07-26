@@ -40,10 +40,12 @@ class GameProvider extends ChangeNotifier {
       !_isProcessing;
   
   /// ゲートを適用
+  /// [processAi]: false のとき CPU 手番を自動進行しない（VSチュートリアル用）
   Future<bool> applyGate(
     GateType gate,
-    List<Position> targetPositions,
-  ) async {
+    List<Position> targetPositions, {
+    bool processAi = true,
+  }) async {
     if (_isProcessing) return false;
     
     _isProcessing = true;
@@ -89,7 +91,8 @@ class GameProvider extends ChangeNotifier {
       }
       
       // CPUのターンの場合
-      if (_gameState.gameMode == GameMode.vs &&
+      if (processAi &&
+          _gameState.gameMode == GameMode.vs &&
           _gameState.getCurrentPlayer()?.isAI == true) {
         await _processAITurn();
       }
@@ -103,6 +106,26 @@ class GameProvider extends ChangeNotifier {
       _isProcessing = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// 保留中のCPU手番を進行（VSチュートリアル用）
+  Future<void> processPendingAiTurn() async {
+    if (_isProcessing) return;
+    if (_gameState.gameMode != GameMode.vs) return;
+    if (_gameState.getCurrentPlayer()?.isAI != true) return;
+
+    _isProcessing = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _processAITurn();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isProcessing = false;
+      notifyListeners();
+      _persistVsSnapshot();
     }
   }
   

@@ -8,6 +8,9 @@ import '../widgets/tutorial/tutorial_visual_element_widget.dart';
 class TutorialScreen extends StatefulWidget {
   const TutorialScreen({super.key});
 
+  /// モード選択側でチャレンジへ誘導するための戻り値
+  static const String resultOpenChallenge = 'open_challenge';
+
   @override
   State<TutorialScreen> createState() => _TutorialScreenState();
 }
@@ -46,6 +49,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
     } else {
       // 最後のページの場合は終了し、完了をマーク
       await _progressService.markTutorialCompleted();
+      if (!mounted) return;
       Navigator.pop(context);
     }
   }
@@ -62,12 +66,18 @@ class _TutorialScreenState extends State<TutorialScreen> {
   bool get _isFirstPage => _currentPageIndex == 0;
   bool get _isLastPage => _currentPageIndex == _pages.length - 1;
   bool get _isGateMasteryPage =>
-      _pages[_currentPageIndex].pageId == 'gate_mastery_complete-1';
+      _pages[_currentPageIndex].pageId == 'gate_mastery_complete';
 
   Future<void> _goHome() async {
     await _progressService.markTutorialCompleted();
     if (!mounted) return;
     Navigator.pop(context);
+  }
+
+  Future<void> _goToChallenge() async {
+    await _progressService.markTutorialCompleted();
+    if (!mounted) return;
+    Navigator.pop(context, TutorialScreen.resultOpenChallenge);
   }
 
   @override
@@ -224,21 +234,27 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 style: TextStyle(color: Colors.white70),
               ),
             ),
-            const SizedBox.shrink(),
-            ElevatedButton(
+            TextButton(
               onPressed: _goHome,
+              child: const Text(
+                '閉じる',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _goToChallenge,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
+                backgroundColor: const Color(0xFF2196F3),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+                  horizontal: 16,
                   vertical: 16,
                 ),
               ),
               child: const Text(
-                '閉じる',
+                'チャレンジへ',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -272,29 +288,41 @@ class _TutorialScreenState extends State<TutorialScreen> {
               style: TextStyle(color: Colors.white70),
             ),
           ),
-          TextButton(
-            onPressed: () async {
-              // スキップをマーク
-              await _progressService.markTutorialSkipped();
-              Navigator.pop(context);
-            },
-            child: const Text(
-              'スキップ',
-              style: TextStyle(color: Colors.white70),
+          if (_isLastPage)
+            TextButton(
+              onPressed: _goHome,
+              child: const Text(
+                '終了',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          else
+            TextButton(
+              onPressed: () async {
+                // スキップをマーク
+                await _progressService.markTutorialSkipped();
+                if (!mounted) return;
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'スキップ',
+                style: TextStyle(color: Colors.white70),
+              ),
             ),
-          ),
           ElevatedButton(
-            onPressed: _nextPage,
+            onPressed: _isLastPage ? _goToChallenge : _nextPage,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: _isLastPage
+                  ? const Color(0xFF2196F3)
+                  : const Color(0xFF4CAF50),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(
-                horizontal: 32,
+                horizontal: 24,
                 vertical: 16,
               ),
             ),
             child: Text(
-              _isLastPage ? '終了' : '次へ',
+              _isLastPage ? 'チャレンジへ' : '次へ',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,

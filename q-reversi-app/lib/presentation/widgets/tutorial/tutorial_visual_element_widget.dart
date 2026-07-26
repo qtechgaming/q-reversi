@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import '../../../domain/entities/tutorial_content.dart';
 import 'tutorial_board_widget.dart';

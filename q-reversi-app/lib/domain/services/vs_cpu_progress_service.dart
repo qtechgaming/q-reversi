@@ -83,6 +83,13 @@ class VsCpuProgressSnapshot {
     if (i < 0) return false;
     return i <= unlockedMaxIndex;
   }
+
+  /// 対CPU戦を1戦でも完了すると対人戦・ターン数選択を解放
+  bool get isHumanModeUnlocked =>
+      stats.values.any((s) => s.played > 0);
+
+  /// ターン数の選択肢解放（対人戦と同じ条件）
+  bool get isTurnOptionsUnlocked => isHumanModeUnlocked;
 }
 
 /// VSモード・CPU難易度の解放と対戦記録

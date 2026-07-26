@@ -15,7 +15,12 @@ class ChallengeLevelLoader {
   Future<List<ChallengeLevel>> loadAllLevels() async {
     try {
       final String csvString = await rootBundle.loadString(_csvPath);
-      final List<List<dynamic>> csvData = const CsvToListConverter().convert(csvString);
+      // Windows/Unix どちらの改行でも1行ずつ解釈できるように正規化する
+      final normalized = csvString
+          .replaceAll('\r\n', '\n')
+          .replaceAll('\r', '\n');
+      final List<List<dynamic>> csvData =
+          const CsvToListConverter(eol: '\n').convert(normalized);
 
       if (csvData.length < 4) {
         throw Exception('CSVファイルのフォーマットが不正です');
@@ -64,7 +69,8 @@ class ChallengeLevelLoader {
       if (startIndex >= csvData.length) return null;
       final levelRow = csvData[startIndex];
       
-      final levelNumber = int.tryParse(levelRow[0]?.toString().trim() ?? '');
+      final levelNumber =
+          ChallengeLevel.parseLevelId(levelRow[0]?.toString() ?? '');
       if (levelNumber == null) return null;
 
       final optimalTurns = int.tryParse(levelRow[1]?.toString().trim() ?? '') ?? 1;

@@ -25,11 +25,13 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
   final VsCpuProgressService _vsCpuProgressService = VsCpuProgressService();
   final VsGamePersistenceService _vsPersistence = VsGamePersistenceService();
 
-  VsMode _vsMode = VsMode.human;
+  VsMode _vsMode = VsMode.cpu;
   AIDifficulty _aiDifficulty = AIDifficulty.beginner;
   int _maxTurns = GameConstants.defaultVsModeTurns;
   VsCpuProgressSnapshot? _cpuProgress;
   bool _cpuProgressLoading = true;
+  bool _humanModeUnlocked = false;
+  bool _turnOptionsUnlocked = false;
 
   @override
   void initState() {
@@ -43,6 +45,14 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
     setState(() {
       _cpuProgress = snap;
       _cpuProgressLoading = false;
+      _humanModeUnlocked = snap.isHumanModeUnlocked;
+      _turnOptionsUnlocked = snap.isTurnOptionsUnlocked;
+      if (!_humanModeUnlocked) {
+        _vsMode = VsMode.cpu;
+      }
+      if (!_turnOptionsUnlocked) {
+        _maxTurns = GameConstants.defaultVsModeTurns;
+      }
       if (!snap.isUnlocked(_aiDifficulty)) {
         _aiDifficulty = AIDifficulty.beginner;
       }
@@ -285,7 +295,7 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
+                  const Text(
                     '成績',
                     textAlign: TextAlign.right,
                     style: TextStyle(
@@ -399,17 +409,6 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
               const SizedBox(height: 8),
               RadioListTile<VsMode>(
                 title: const Text(
-                  '対人戦',
-                  style: TextStyle(color: Colors.white),
-                ),
-                value: VsMode.human,
-                groupValue: _vsMode,
-                onChanged: (value) {
-                  setState(() => _vsMode = value!);
-                },
-              ),
-              RadioListTile<VsMode>(
-                title: const Text(
                   '対CPU戦',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -418,6 +417,42 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
                 onChanged: (value) {
                   setState(() => _vsMode = value!);
                 },
+              ),
+              RadioListTile<VsMode>(
+                title: Row(
+                  children: [
+                    if (!_humanModeUnlocked) ...[
+                      Icon(
+                        Icons.lock_outline,
+                        size: 18,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      '対人戦',
+                      style: TextStyle(
+                        color: _humanModeUnlocked ? Colors.white : Colors.white54,
+                      ),
+                    ),
+                  ],
+                ),
+                subtitle: _humanModeUnlocked
+                    ? null
+                    : Text(
+                        '対CPU戦を1回プレイすると解放されます',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.55),
+                          fontSize: 12,
+                        ),
+                      ),
+                value: VsMode.human,
+                groupValue: _vsMode,
+                onChanged: _humanModeUnlocked
+                    ? (value) {
+                        setState(() => _vsMode = value!);
+                      }
+                    : null,
               ),
               if (_vsMode == VsMode.cpu) ...[
                 const SizedBox(height: 16),
@@ -432,20 +467,65 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 8),
-              ...GameConstants.vsModeTurnOptions.map((turns) {
-                return RadioListTile<int>(
-                  title: Text(
-                    '$turnsターン',
-                    style: const TextStyle(color: Colors.white),
+              if (!_turnOptionsUnlocked) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '最初は20ターン固定です。対CPU戦を1回プレイすると変更できます。',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.55),
+                    fontSize: 12,
                   ),
-                  value: turns,
-                  groupValue: _maxTurns,
-                  onChanged: (value) {
-                    setState(() => _maxTurns = value!);
-                  },
-                );
-              }),
+                ),
+              ],
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                value: _maxTurns,
+                dropdownColor: const Color(0xFF242A50),
+                iconEnabledColor: const Color(0xFF06B6D4),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white.withOpacity(0.06),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.white.withOpacity(0.18),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF06B6D4),
+                      width: 2,
+                    ),
+                  ),
+                ),
+                items: (_turnOptionsUnlocked
+                        ? GameConstants.vsModeTurnOptions
+                        : const [GameConstants.defaultVsModeTurns])
+                    .map((turns) {
+                  return DropdownMenuItem<int>(
+                    value: turns,
+                    child: Text('$turnsターン'),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  if (!_turnOptionsUnlocked &&
+                      value != GameConstants.defaultVsModeTurns) {
+                    return;
+                  }
+                  setState(() => _maxTurns = value);
+                },
+              ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () => _startGame(context),
@@ -467,6 +547,16 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
   }
 
   Future<void> _startGame(BuildContext context) async {
+    final vsMode = _humanModeUnlocked ? _vsMode : VsMode.cpu;
+    final maxTurns = _turnOptionsUnlocked
+        ? _maxTurns
+        : GameConstants.defaultVsModeTurns;
+    final aiDifficulty = vsMode == VsMode.cpu
+        ? (_cpuProgress?.isUnlocked(_aiDifficulty) == true
+            ? _aiDifficulty
+            : AIDifficulty.beginner)
+        : null;
+
     await _vsPersistence.clear();
     if (!context.mounted) return;
     final board = Board.create8x8();
@@ -480,15 +570,15 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
     final player2 = Player(
       id: 2,
       color: PlayerColor.black,
-      isAI: _vsMode == VsMode.cpu,
-      aiDifficulty: _vsMode == VsMode.cpu ? _aiDifficulty : null,
+      isAI: vsMode == VsMode.cpu,
+      aiDifficulty: aiDifficulty,
     );
 
     final gameState = GameState(
       board: board,
       gameMode: GameMode.vs,
-      vsMode: _vsMode,
-      maxTurns: _maxTurns,
+      vsMode: vsMode,
+      maxTurns: maxTurns,
       currentPlayer: 1,
       players: {
         1: player1,
