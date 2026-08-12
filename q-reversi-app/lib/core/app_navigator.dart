@@ -14,6 +14,7 @@ class AppNavigator {
 
   /// 対戦画面を閉じ、直下の VS モード設定へ戻る（iOS では右へスワイプアウト）。
   /// 設定がスタックに無い場合のみ新規 push。保存済み途中盤は削除。
+  /// 閉じる・戻るのどちらからでも、戻った設定画面で対戦実績を再読込する。
   static Future<void> exitVsToModeSetup() async {
     await VsGamePersistenceService().clear();
     final nav = key.currentState;
@@ -35,6 +36,9 @@ class AppNavigator {
           builder: (_) => const VsModeSetupScreen(),
         ),
       );
+    } else {
+      // 既存の設定画面を再利用しているため、明示的に実績を再読込
+      VsModeSetupScreen.requestProgressRefresh();
     }
   }
 

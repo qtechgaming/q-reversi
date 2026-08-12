@@ -13,6 +13,13 @@ import '../../domain/services/vs_cpu_progress_service.dart';
 class VsModeSetupScreen extends StatefulWidget {
   const VsModeSetupScreen({super.key});
 
+  /// 対戦から戻ったときに実績を再読込させる
+  static final ValueNotifier<int> progressRefreshTick = ValueNotifier<int>(0);
+
+  static void requestProgressRefresh() {
+    progressRefreshTick.value++;
+  }
+
   @override
   State<VsModeSetupScreen> createState() => _VsModeSetupScreenState();
 }
@@ -36,6 +43,17 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
   @override
   void initState() {
     super.initState();
+    VsModeSetupScreen.progressRefreshTick.addListener(_onProgressRefreshTick);
+    _refreshCpuProgress();
+  }
+
+  @override
+  void dispose() {
+    VsModeSetupScreen.progressRefreshTick.removeListener(_onProgressRefreshTick);
+    super.dispose();
+  }
+
+  void _onProgressRefreshTick() {
     _refreshCpuProgress();
   }
 
