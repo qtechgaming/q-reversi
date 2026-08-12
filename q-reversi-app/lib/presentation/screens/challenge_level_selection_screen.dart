@@ -4,6 +4,7 @@ import '../../domain/entities/challenge_level.dart';
 import '../../domain/entities/challenge_progress.dart';
 import '../../domain/services/challenge_level_loader.dart';
 import '../providers/challenge_progress_notifier.dart';
+import 'challenge_flow_scope.dart';
 import 'challenge_game_screen.dart';
 import 'challenge_stage_advance_result.dart';
 
@@ -433,22 +434,24 @@ class _ChallengeLevelSelectionScreenState
     ChallengeLevel? current = level;
 
     while (current != null && mounted) {
-      final result = await Navigator.push<Object?>(
+      final session = context.read<ChallengePlaySession>();
+      final sessionFuture = session.arm();
+
+      // push の Future は pushReplacement で途中完了するため待たない。
+      // 選択へ戻るときはゲーム側が session.finish する。
+      Navigator.push<Object?>(
         context,
         MaterialPageRoute(
           builder: (context) => ChallengeGameScreen(level: current!),
         ),
       );
 
+      final result = await sessionFuture;
+
       if (!mounted) return;
       // ディスクと同期（Notifier はクリア時に既に更新済みだが、保険として再読込）
       await context.read<ChallengeProgressNotifier>().hydrate();
       if (!mounted) return;
-
-      if (result is ChallengeContinueToLevelResult) {
-        current = result.level;
-        continue;
-      }
 
       if (result is ChallengeStageAdvanceResult) {
         await _revealNextStage(result);

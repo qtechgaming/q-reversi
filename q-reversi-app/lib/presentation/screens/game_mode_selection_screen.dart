@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../core/app_navigator.dart';
 import '../../data/vs_game_persistence_service.dart';
 import '../../domain/entities/game_mode.dart';
 import '../../domain/services/challenge_progress_service.dart';
 import '../../domain/services/tutorial_progress_service.dart';
-import 'vs_mode_setup_screen.dart';
 import 'game_screen.dart';
 import 'challenge_flow_scope.dart';
 import 'tutorial_screen.dart';
@@ -298,9 +298,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
     if (!hasSave) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const VsModeSetupScreen(),
-        ),
+        AppNavigator.vsSetupRoute(),
       );
       return;
     }
@@ -342,12 +340,15 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
       if (snap == null) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const VsModeSetupScreen(),
-          ),
+          AppNavigator.vsSetupRoute(),
         );
         return;
       }
+      // 閉じる時に設定画面が下層になるよう、無アニメで設定を積んでから対戦へ
+      Navigator.push(
+        context,
+        AppNavigator.vsSetupRoute(animate: false),
+      );
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -363,9 +364,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
       if (!context.mounted) return;
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const VsModeSetupScreen(),
-        ),
+        AppNavigator.vsSetupRoute(),
       );
     }
   }

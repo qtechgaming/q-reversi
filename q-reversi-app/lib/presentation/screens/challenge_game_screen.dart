@@ -16,6 +16,8 @@ import '../providers/game_provider.dart';
 import '../widgets/board_widget.dart';
 import '../widgets/gate_button.dart';
 import '../widgets/operation_order_settings_dialog.dart';
+import 'challenge_flow_scope.dart';
+import 'challenge_level_page_route.dart';
 import 'challenge_stage_advance_result.dart';
 
 /// チャレンジゲーム画面
@@ -349,7 +351,15 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
 
     return ChangeNotifierProvider(
       create: (_) => GameProvider(gameState),
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          // システム戻る / AppBar 戻る → 選択画面セッションを終了
+          context.read<ChallengePlaySession>().finish();
+          Navigator.of(context).pop();
+        },
+        child: Scaffold(
         appBar: AppBar(
           title: Text(
             'レベル ${widget.level.displayLabel}',
@@ -477,6 +487,7 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -526,9 +537,12 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
     final progressManager =
         context.read<ChallengeProgressNotifier>().progress;
     if (!progressManager.isLevelUnlocked(targetLevel.level)) return false;
-    // 選択画面のプレイループを維持するため pushReplacement は使わない
-    Navigator.of(context).pop(
-      ChallengeContinueToLevelResult(targetLevel),
+    // 現在レベルを背景に残し、隣接レベルへ置換（次=右から / 前=左から）
+    Navigator.of(context).pushReplacement(
+      challengeLevelPageRoute(
+        builder: (_) => ChallengeGameScreen(level: targetLevel),
+        fromRight: direction > 0,
+      ),
     );
     return true;
   }
@@ -1352,23 +1366,26 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
             nextLevel.stageNumber != widget.level.stageNumber;
         if (isStageTransition) {
           // ステージ選択画面に戻り、次ステージ全体を見せてから先頭レベルを開く
-          Navigator.of(context).pop(
-            ChallengeStageAdvanceResult(
-              completedStageNumber: widget.level.stageNumber,
-              nextStageNumber: nextLevel.stageNumber,
-              firstLevel: nextLevel,
-            ),
+          final result = ChallengeStageAdvanceResult(
+            completedStageNumber: widget.level.stageNumber,
+            nextStageNumber: nextLevel.stageNumber,
+            firstLevel: nextLevel,
           );
+          context.read<ChallengePlaySession>().finish(result);
+          Navigator.of(context).pop(result);
         } else {
-          // pushReplacement だと選択画面の await が途切れるため、pop で継続する
-          Navigator.of(context).pop(
-            ChallengeContinueToLevelResult(nextLevel),
+          // 現在レベルを背景に、次レベルが右から入る（選択画面は見せない）
+          Navigator.of(context).pushReplacement(
+            challengeLevelPageRoute(
+              builder: (_) => ChallengeGameScreen(level: nextLevel),
+            ),
           );
         }
         return;
       }
 
       if (value == 'ok') {
+        context.read<ChallengePlaySession>().finish(true);
         Navigator.of(context).pop(true);
       }
     });
