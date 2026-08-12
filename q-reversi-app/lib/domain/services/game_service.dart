@@ -21,17 +21,19 @@ class GameService {
     final currentPlayer = gameState.getCurrentPlayer();
     if (currentPlayer == null) return gameState;
 
-    // クールタイムチェック（フリーランモードとチャレンジモードではスキップ）
+    // クールタイムチェック（フリーラン / チャレンジ / TIME ATTACK ではスキップ）
     if (gameState.gameMode != GameMode.freeRun && 
-        gameState.gameMode != GameMode.challenge && 
+        gameState.gameMode != GameMode.challenge &&
+        gameState.gameMode != GameMode.timeAttack &&
         !currentPlayer.canUseGate(gate)) {
       return gameState; // エラー: クールタイム中
     }
     
-    // 禁止領域チェック（1ビットゲートのみ適用、フリーランモードとチャレンジモードではスキップ）
+    // 禁止領域チェック（1ビットゲートのみ適用、フリーラン / チャレンジ / TIME ATTACK ではスキップ）
     if (gate.isOneBitGate && 
         gameState.gameMode != GameMode.freeRun && 
-        gameState.gameMode != GameMode.challenge) {
+        gameState.gameMode != GameMode.challenge &&
+        gameState.gameMode != GameMode.timeAttack) {
       // 禁止領域は「次の相手ターン」用として set されるため、
       // 適用時点では“現在手番プレイヤーの forbiddenAreas”を参照して拒否する。
       final currentForbiddenAreas = gameState.getForbiddenAreas(currentPlayer.id);
@@ -118,15 +120,19 @@ class GameService {
       }
     }
     
-    // クールタイムを更新（フリーランモードとチャレンジモードではクールタイムを設定しない）
-    final updatedPlayer = (gameState.gameMode == GameMode.freeRun || gameState.gameMode == GameMode.challenge)
+    // クールタイムを更新（フリーラン / チャレンジ / TIME ATTACK ではクールタイムを設定しない）
+    final updatedPlayer = (gameState.gameMode == GameMode.freeRun ||
+            gameState.gameMode == GameMode.challenge ||
+            gameState.gameMode == GameMode.timeAttack)
         ? currentPlayer
         : currentPlayer.useGate(gate);
     final newPlayers = Map<int, Player>.from(newState.players);
     newPlayers[currentPlayer.id] = updatedPlayer;
     
-    // フリーランモードまたはチャレンジモードの場合はターンを進めるが、プレイヤーは変更しない
-    if (gameState.gameMode == GameMode.freeRun || gameState.gameMode == GameMode.challenge) {
+    // フリーラン / チャレンジ / TIME ATTACK の場合はターンを進めるが、プレイヤーは変更しない
+    if (gameState.gameMode == GameMode.freeRun ||
+        gameState.gameMode == GameMode.challenge ||
+        gameState.gameMode == GameMode.timeAttack) {
       // クールタイムを減少（自分のクールタイムを減少）
       final decreasedPlayer = updatedPlayer.decreaseCooldowns();
       newPlayers[currentPlayer.id] = decreasedPlayer;

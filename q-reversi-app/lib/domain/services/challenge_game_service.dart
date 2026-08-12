@@ -42,12 +42,15 @@ class ChallengeGameService {
   }
 
   /// チャレンジ用のGameStateを作成
-  GameState createChallengeGameState(ChallengeLevel level) {
+  GameState createChallengeGameState(
+    ChallengeLevel level, {
+    GameMode gameMode = GameMode.challenge,
+  }) {
     final board = level.initialBoard;
     
     return GameState(
       board: board,
-      gameMode: GameMode.challenge,
+      gameMode: gameMode,
       currentPlayer: 1,
       turnCount: 0,
       maxTurns: 999999, // ターン制限を廃止（実質無制限）

@@ -65,7 +65,7 @@ class ChallengeLevelLoader {
   /// レベルをパース
   ChallengeLevel? _parseLevel(List<List<dynamic>> csvData, int startIndex) {
     try {
-      // level行: level, turn, available gate, victory condition, ..., comment
+      // level行: level, turn, available gate, victory condition, difficulty, ..., comment
       if (startIndex >= csvData.length) return null;
       final levelRow = csvData[startIndex];
       
@@ -82,7 +82,13 @@ class ChallengeLevelLoader {
       final victoryCondition = VictoryConditionExtension.fromString(victoryConditionStr) ?? 
           VictoryCondition.allWhite;
 
-      final comment = levelRow.length > 13 ? levelRow[13]?.toString().trim() ?? '' : '';
+      final difficulty =
+          int.tryParse(levelRow.length > 4 ? levelRow[4]?.toString().trim() ?? '' : '') ??
+              1;
+
+      // comment は difficulty 追加後の末尾列（index 14）
+      final comment =
+          levelRow.length > 14 ? levelRow[14]?.toString().trim() ?? '' : '';
 
       // 盤面データを読み込む（次の行から8行）
       final boardStartIndex = startIndex + 2; // 座標行をスキップ
@@ -95,6 +101,7 @@ class ChallengeLevelLoader {
         victoryCondition: victoryCondition,
         initialBoard: board,
         comment: comment,
+        difficulty: difficulty,
       );
     } catch (e) {
       return null;

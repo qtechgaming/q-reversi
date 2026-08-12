@@ -14,6 +14,7 @@ import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
 import '../widgets/operation_order_settings_dialog.dart';
+import 'time_attack_start_screen.dart';
 
 /// ゲームモード選択画面
 class GameModeSelectionScreen extends StatefulWidget {
@@ -173,6 +174,23 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                   await _checkTutorialStatus();
                 },
                 enabled: _isTutorialCompleted,
+              ),
+              const SizedBox(height: 16),
+              _buildModeCard(
+                context,
+                'タイムアタックモード',
+                'チャレンジモードの問題をタイムアタックで競争',
+                Icons.timer,
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TimeAttackStartScreen(),
+                    ),
+                  );
+                },
+                enabled: _isStage0RequirementMet,
+                onDisabledTap: _showStage0LockedMessage,
               ),
               const SizedBox(height: 16),
               _buildModeCard(

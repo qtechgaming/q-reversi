@@ -4,6 +4,7 @@ enum GameMode {
   vs,           // VSモード
   freeRun,      // フリーランモード
   study,        // スタディモード
+  timeAttack,   // タイムアタックモード
   professional, // プロフェッショナルモード（将来拡張）
 }
 

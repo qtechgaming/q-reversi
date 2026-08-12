@@ -18,6 +18,9 @@ class ChallengeLevel extends Equatable {
   final Board initialBoard;
   final String comment;
 
+  /// 作者主観難易度（CSV `difficulty`、1〜10）
+  final int difficulty;
+
   const ChallengeLevel({
     required this.level,
     required this.optimalTurns,
@@ -25,7 +28,11 @@ class ChallengeLevel extends Equatable {
     required this.victoryCondition,
     required this.initialBoard,
     required this.comment,
+    this.difficulty = 1,
   });
+
+  /// TIME ATTACK 用 score（手数 + 難易度）
+  int get timeAttackScore => optimalTurns + difficulty;
 
   static bool isStage0Level(int level) =>
       level >= stage0FirstLevel && level <= stage0LastLevel;
@@ -97,6 +104,7 @@ class ChallengeLevel extends Equatable {
         victoryCondition,
         initialBoard,
         comment,
+        difficulty,
       ];
 }
 
