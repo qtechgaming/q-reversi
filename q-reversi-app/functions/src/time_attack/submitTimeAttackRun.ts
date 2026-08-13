@@ -57,6 +57,30 @@ export const submitTimeAttackRun = onCall(
     }
 
     if (run.status === "completed" && run.officialResult) {
+      // 前回: run 完了後に leaderboard 更新が落ちた場合の再送
+      const official = run.officialResult as {
+        clearCount: number;
+        comboBonus: number;
+        timeBonus: number;
+        totalScore: number;
+        maxCombo: number;
+      };
+      try {
+        const displayName = await ensureDisplayName(uid);
+        await maybeUpdateLeaderboard({
+          uid,
+          displayName,
+          clearCount: Number(official.clearCount ?? 0),
+          comboBonus: Number(official.comboBonus ?? 0),
+          timeBonus: Number(official.timeBonus ?? 0),
+          totalScore: Number(official.totalScore ?? 0),
+          maxCombo: Number(official.maxCombo ?? 0),
+          achievedAt: new Date().toISOString(),
+          bestRunId: runId,
+        });
+      } catch {
+        // 再送のランキング同期失敗は alreadyCompleted 応答を妨げない
+      }
       return {
         runId,
         alreadyCompleted: true,

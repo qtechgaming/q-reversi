@@ -35,7 +35,9 @@ export async function maybeUpdateVsQuantumLeaderboard(params: {
   const achievedAt = new Date().toISOString();
 
   return db.runTransaction(async (tx) => {
+    // Firestore: すべての get を write より前に行う
     const userSnap = await tx.get(userRef);
+    const boardSnap = await tx.get(boardRef);
     const user = userSnap.data() ?? {};
     const prevWins = (user.vsQuantumWins as number | undefined) ?? 0;
     if (wins <= prevWins) {
@@ -62,7 +64,6 @@ export async function maybeUpdateVsQuantumLeaderboard(params: {
       return { updated: true, wins };
     }
 
-    const boardSnap = await tx.get(boardRef);
     const entries = (
       (boardSnap.data()?.entries as VsQuantumRankingEntry[] | undefined) ?? []
     ).filter((e) => e.uid !== params.uid);

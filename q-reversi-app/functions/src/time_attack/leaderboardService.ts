@@ -35,7 +35,9 @@ export async function maybeUpdateLeaderboard(params: {
   const boardRef = db.doc(LEADERBOARD_DOC);
 
   return db.runTransaction(async (tx) => {
+    // Firestore: すべての get を write より前に行う
     const userSnap = await tx.get(userRef);
+    const boardSnap = await tx.get(boardRef);
     const user = userSnap.data() ?? {};
     const prevBest = (user.bestTotalScore as number | undefined) ?? -1;
     const isBetter = params.totalScore > prevBest;
@@ -68,7 +70,6 @@ export async function maybeUpdateLeaderboard(params: {
       return true;
     }
 
-    const boardSnap = await tx.get(boardRef);
     const entries = (
       (boardSnap.data()?.entries as RankingEntry[] | undefined) ?? []
     ).filter((e) => e.uid !== params.uid);
