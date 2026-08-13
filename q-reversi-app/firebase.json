@@ -8,6 +8,14 @@
           "fileOutput": "android/app/google-services.json"
         }
       },
+      "ios": {
+        "default": {
+          "projectId": "qreversi",
+          "appId": "1:221598186365:ios:cbdf95f540abe565356a14",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
       "dart": {
         "lib/firebase_options.dart": {
           "projectId": "qreversi",
