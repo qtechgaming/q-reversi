@@ -167,7 +167,7 @@ level,turn,available gate,victory condition,difficulty,,,,,,,,,,comment
 ,,,,7,B,B,B,B,B,B,B,B,,
 ,,,,8,B,B,B,B,B,B,B,B,,
 level,turn,available gate,victory condition,difficulty,,,,,,,,,,comment
-1,1,X,All white,1,,,,,,,,,,learn X
+1,2,X,All white,1,,,,,,,,,,learn X
 ,,,,,1,2,3,4,5,6,7,8,,
 ,,,,1,W,W,W,B,W,W,W,W,,
 ,,,,2,W,W,W,B,W,W,W,W,,

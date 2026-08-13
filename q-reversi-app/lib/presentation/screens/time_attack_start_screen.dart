@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-import '../../domain/services/challenge_level_loader.dart';
-import '../../domain/time_attack/time_attack_level_sequence_generator.dart';
+import '../../data/firebase/time_attack_run_remote_service.dart';
+import '../../data/time_attack/time_attack_run_launcher.dart';
 import '../../domain/time_attack/time_attack_run_state.dart';
 import '../widgets/operation_order_settings_dialog.dart';
 import 'time_attack_game_screen.dart';
+import 'time_attack_leaderboard_screen.dart';
 import 'time_attack_result_screen.dart';
 
 class TimeAttackStartScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class TimeAttackStartScreen extends StatefulWidget {
 }
 
 class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
-  final _loader = ChallengeLevelLoader();
+  final _launcher = TimeAttackRunLauncher();
   bool _starting = false;
   String? _error;
 
@@ -28,19 +29,22 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
     });
 
     try {
-      final levels = await _loader.loadAllLevels();
-      final generator = TimeAttackLevelSequenceGenerator();
-      final sequence = generator.generate(levels);
+      final prepared = await _launcher.prepare();
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => TimeAttackGameScreen(sequence: sequence),
+          builder: (_) => TimeAttackGameScreen(
+            sequence: prepared.sequence,
+            runId: prepared.runId,
+          ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = e is TimeAttackRunRemoteException
+            ? e.message
+            : 'TIME ATTACKの開始には通信が必要です。';
         _starting = false;
       });
     }
@@ -49,7 +53,10 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
   void _openResultPreview(TimeAttackRunState runState) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => TimeAttackResultScreen(runState: runState),
+        builder: (_) => TimeAttackResultScreen(
+          runState: runState,
+          persistResult: false,
+        ),
       ),
     );
   }
@@ -113,6 +120,11 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.redAccent),
                   ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: _starting ? null : _start,
+                    child: const Text('再試行'),
+                  ),
                 ],
                 const Spacer(),
                 ElevatedButton(
@@ -140,21 +152,33 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
                         ),
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton(
+                OutlinedButton.icon(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('ランキングは準備中です'),
-                        duration: Duration(seconds: 2),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const TimeAttackLeaderboardScreen(),
                       ),
                     );
                   },
+                  icon: const Icon(Icons.emoji_events, size: 22),
+                  label: const Text(
+                    'RANKING',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white54,
-                    side: const BorderSide(color: Colors.white24),
+                    foregroundColor: const Color(0xFFFFD54F),
+                    backgroundColor:
+                        const Color(0xFFFFD54F).withValues(alpha: 0.12),
+                    side: const BorderSide(
+                      color: Color(0xFFFFD54F),
+                      width: 1.5,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: const Text('RANKING（準備中）'),
                 ),
                 if (kDebugMode) ...[
                   const SizedBox(height: 20),
@@ -178,7 +202,7 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
                       side: BorderSide(color: Colors.amber.withValues(alpha: 0.5)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text('TIME UP 画面を見る'),
+                    child: const Text('CLEAR 画面を見る'),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(

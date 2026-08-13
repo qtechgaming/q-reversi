@@ -633,16 +633,6 @@ class _ChallengeGameScreenState extends State<ChallengeGameScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.level.comment.isNotEmpty)
-                  Text(
-                    widget.level.comment,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                if (widget.level.comment.isNotEmpty) const SizedBox(height: 8),
                 Container(
                   key: _goalConditionKey,
                   child: Text(

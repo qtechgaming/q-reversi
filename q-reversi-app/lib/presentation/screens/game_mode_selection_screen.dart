@@ -179,7 +179,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
               _buildModeCard(
                 context,
                 'タイムアタックモード',
-                'チャレンジモードの問題をタイムアタックで競争',
+                'タイムアタックでランキング',
                 Icons.timer,
                 () {
                   Navigator.push(

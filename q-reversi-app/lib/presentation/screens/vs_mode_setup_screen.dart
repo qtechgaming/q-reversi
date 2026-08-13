@@ -8,6 +8,7 @@ import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
 import '../../domain/services/vs_cpu_progress_service.dart';
+import 'vs_quantum_leaderboard_screen.dart';
 
 /// VSモード設定画面
 class VsModeSetupScreen extends StatefulWidget {
@@ -76,6 +77,9 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
       }
     });
   }
+
+  bool get _isQuantumUnlocked =>
+      _cpuProgress?.isUnlocked(AIDifficulty.quantum) ?? false;
 
   String _difficultyTitle(AIDifficulty d) {
     switch (d) {
@@ -557,6 +561,37 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
+              if (_isQuantumUnlocked) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const VsQuantumLeaderboardScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.emoji_events, size: 22),
+                  label: const Text(
+                    'VS量子AI RANKING',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFFD54F),
+                    backgroundColor:
+                        const Color(0xFFFFD54F).withValues(alpha: 0.12),
+                    side: const BorderSide(
+                      color: Color(0xFFFFD54F),
+                      width: 1.5,
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

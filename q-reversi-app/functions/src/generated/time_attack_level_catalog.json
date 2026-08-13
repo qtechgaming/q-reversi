@@ -1,0 +1,2207 @@
+[
+  {
+    "levelId": 1,
+    "displayLabel": "1",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 2,
+    "displayLabel": "2",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 3,
+    "displayLabel": "3",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 4,
+    "displayLabel": "4",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 5,
+    "displayLabel": "5",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 6,
+    "displayLabel": "6",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 7,
+    "displayLabel": "7",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 8,
+    "displayLabel": "8",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 9,
+    "displayLabel": "9",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 10,
+    "displayLabel": "10",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 11,
+    "displayLabel": "11",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 12,
+    "displayLabel": "12",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 13,
+    "displayLabel": "13",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 14,
+    "displayLabel": "14",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 15,
+    "displayLabel": "15",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 16,
+    "displayLabel": "16",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 17,
+    "displayLabel": "17",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 18,
+    "displayLabel": "18",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 19,
+    "displayLabel": "19",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 20,
+    "displayLabel": "20",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 21,
+    "displayLabel": "21",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 22,
+    "displayLabel": "22",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 23,
+    "displayLabel": "23",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 24,
+    "displayLabel": "24",
+    "optimalTurns": 5,
+    "difficulty": 3,
+    "score": 8
+  },
+  {
+    "levelId": 25,
+    "displayLabel": "25",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 26,
+    "displayLabel": "26",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 27,
+    "displayLabel": "27",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 28,
+    "displayLabel": "28",
+    "optimalTurns": 5,
+    "difficulty": 3,
+    "score": 8
+  },
+  {
+    "levelId": 29,
+    "displayLabel": "29",
+    "optimalTurns": 4,
+    "difficulty": 2,
+    "score": 6
+  },
+  {
+    "levelId": 30,
+    "displayLabel": "30",
+    "optimalTurns": 8,
+    "difficulty": 2,
+    "score": 10
+  },
+  {
+    "levelId": 31,
+    "displayLabel": "31",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 32,
+    "displayLabel": "32",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 33,
+    "displayLabel": "33",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 34,
+    "displayLabel": "34",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 35,
+    "displayLabel": "35",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 36,
+    "displayLabel": "36",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 37,
+    "displayLabel": "37",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 38,
+    "displayLabel": "38",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 39,
+    "displayLabel": "39",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 40,
+    "displayLabel": "40",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 41,
+    "displayLabel": "41",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 42,
+    "displayLabel": "42",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 43,
+    "displayLabel": "43",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 44,
+    "displayLabel": "44",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 45,
+    "displayLabel": "45",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 46,
+    "displayLabel": "46",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 47,
+    "displayLabel": "47",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 48,
+    "displayLabel": "48",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 49,
+    "displayLabel": "49",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 50,
+    "displayLabel": "50",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 51,
+    "displayLabel": "51",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 52,
+    "displayLabel": "52",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 53,
+    "displayLabel": "53",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 54,
+    "displayLabel": "54",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 55,
+    "displayLabel": "55",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 56,
+    "displayLabel": "56",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 57,
+    "displayLabel": "57",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 58,
+    "displayLabel": "58",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 59,
+    "displayLabel": "59",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 60,
+    "displayLabel": "60",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 61,
+    "displayLabel": "61",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 62,
+    "displayLabel": "62",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 63,
+    "displayLabel": "63",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 64,
+    "displayLabel": "64",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 65,
+    "displayLabel": "65",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 66,
+    "displayLabel": "66",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 67,
+    "displayLabel": "67",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 68,
+    "displayLabel": "68",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 69,
+    "displayLabel": "69",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 70,
+    "displayLabel": "70",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 71,
+    "displayLabel": "71",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 72,
+    "displayLabel": "72",
+    "optimalTurns": 3,
+    "difficulty": 4,
+    "score": 7
+  },
+  {
+    "levelId": 73,
+    "displayLabel": "73",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 74,
+    "displayLabel": "74",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 75,
+    "displayLabel": "75",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 76,
+    "displayLabel": "76",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 77,
+    "displayLabel": "77",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 78,
+    "displayLabel": "78",
+    "optimalTurns": 3,
+    "difficulty": 3,
+    "score": 6
+  },
+  {
+    "levelId": 79,
+    "displayLabel": "79",
+    "optimalTurns": 3,
+    "difficulty": 4,
+    "score": 7
+  },
+  {
+    "levelId": 80,
+    "displayLabel": "80",
+    "optimalTurns": 4,
+    "difficulty": 2,
+    "score": 6
+  },
+  {
+    "levelId": 81,
+    "displayLabel": "81",
+    "optimalTurns": 4,
+    "difficulty": 2,
+    "score": 6
+  },
+  {
+    "levelId": 82,
+    "displayLabel": "82",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 83,
+    "displayLabel": "83",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 84,
+    "displayLabel": "84",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 85,
+    "displayLabel": "85",
+    "optimalTurns": 4,
+    "difficulty": 2,
+    "score": 6
+  },
+  {
+    "levelId": 86,
+    "displayLabel": "86",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 87,
+    "displayLabel": "87",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 88,
+    "displayLabel": "88",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 89,
+    "displayLabel": "89",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 90,
+    "displayLabel": "90",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 91,
+    "displayLabel": "91",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 92,
+    "displayLabel": "92",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 93,
+    "displayLabel": "93",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 94,
+    "displayLabel": "94",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 95,
+    "displayLabel": "95",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 96,
+    "displayLabel": "96",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 97,
+    "displayLabel": "97",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 98,
+    "displayLabel": "98",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 99,
+    "displayLabel": "99",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 100,
+    "displayLabel": "100",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 101,
+    "displayLabel": "101",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 102,
+    "displayLabel": "102",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 103,
+    "displayLabel": "103",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 104,
+    "displayLabel": "104",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 105,
+    "displayLabel": "105",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 106,
+    "displayLabel": "106",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 107,
+    "displayLabel": "107",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 108,
+    "displayLabel": "108",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 109,
+    "displayLabel": "109",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 110,
+    "displayLabel": "110",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 111,
+    "displayLabel": "111",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 112,
+    "displayLabel": "112",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 113,
+    "displayLabel": "113",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 114,
+    "displayLabel": "114",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 115,
+    "displayLabel": "115",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 116,
+    "displayLabel": "116",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 117,
+    "displayLabel": "117",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 118,
+    "displayLabel": "118",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 119,
+    "displayLabel": "119",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 120,
+    "displayLabel": "120",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 121,
+    "displayLabel": "121",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 122,
+    "displayLabel": "122",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 123,
+    "displayLabel": "123",
+    "optimalTurns": 4,
+    "difficulty": 3,
+    "score": 7
+  },
+  {
+    "levelId": 124,
+    "displayLabel": "124",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 125,
+    "displayLabel": "125",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 126,
+    "displayLabel": "126",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 127,
+    "displayLabel": "127",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 128,
+    "displayLabel": "128",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 129,
+    "displayLabel": "129",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 130,
+    "displayLabel": "130",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 131,
+    "displayLabel": "131",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 132,
+    "displayLabel": "132",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 133,
+    "displayLabel": "133",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 134,
+    "displayLabel": "134",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 135,
+    "displayLabel": "135",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 136,
+    "displayLabel": "136",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 137,
+    "displayLabel": "137",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 138,
+    "displayLabel": "138",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 139,
+    "displayLabel": "139",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 140,
+    "displayLabel": "140",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 141,
+    "displayLabel": "141",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 142,
+    "displayLabel": "142",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 143,
+    "displayLabel": "143",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 144,
+    "displayLabel": "144",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 145,
+    "displayLabel": "145",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 146,
+    "displayLabel": "146",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 147,
+    "displayLabel": "147",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 148,
+    "displayLabel": "148",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 149,
+    "displayLabel": "149",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 150,
+    "displayLabel": "150",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 151,
+    "displayLabel": "151",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 152,
+    "displayLabel": "152",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 153,
+    "displayLabel": "153",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 154,
+    "displayLabel": "154",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 155,
+    "displayLabel": "155",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 156,
+    "displayLabel": "156",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 157,
+    "displayLabel": "157",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 158,
+    "displayLabel": "158",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 159,
+    "displayLabel": "159",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 160,
+    "displayLabel": "160",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 161,
+    "displayLabel": "161",
+    "optimalTurns": 4,
+    "difficulty": 4,
+    "score": 8
+  },
+  {
+    "levelId": 162,
+    "displayLabel": "162",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 163,
+    "displayLabel": "163",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 164,
+    "displayLabel": "164",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 165,
+    "displayLabel": "165",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 166,
+    "displayLabel": "166",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 167,
+    "displayLabel": "167",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 168,
+    "displayLabel": "168",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 169,
+    "displayLabel": "169",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 170,
+    "displayLabel": "170",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 171,
+    "displayLabel": "171",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 172,
+    "displayLabel": "172",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 173,
+    "displayLabel": "173",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 174,
+    "displayLabel": "174",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 175,
+    "displayLabel": "175",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 176,
+    "displayLabel": "176",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 177,
+    "displayLabel": "177",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 178,
+    "displayLabel": "178",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 179,
+    "displayLabel": "179",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 180,
+    "displayLabel": "180",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 181,
+    "displayLabel": "181",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 182,
+    "displayLabel": "182",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 183,
+    "displayLabel": "183",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 184,
+    "displayLabel": "184",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 185,
+    "displayLabel": "185",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 186,
+    "displayLabel": "186",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 187,
+    "displayLabel": "187",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 188,
+    "displayLabel": "188",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 189,
+    "displayLabel": "189",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 190,
+    "displayLabel": "190",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 191,
+    "displayLabel": "191",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 192,
+    "displayLabel": "192",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 193,
+    "displayLabel": "193",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 194,
+    "displayLabel": "194",
+    "optimalTurns": 5,
+    "difficulty": 10,
+    "score": 15
+  },
+  {
+    "levelId": 195,
+    "displayLabel": "195",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 196,
+    "displayLabel": "196",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 197,
+    "displayLabel": "197",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 198,
+    "displayLabel": "198",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 199,
+    "displayLabel": "199",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 200,
+    "displayLabel": "200",
+    "optimalTurns": 5,
+    "difficulty": 10,
+    "score": 15
+  },
+  {
+    "levelId": 201,
+    "displayLabel": "201",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 202,
+    "displayLabel": "202",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 203,
+    "displayLabel": "203",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 204,
+    "displayLabel": "204",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 205,
+    "displayLabel": "205",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 206,
+    "displayLabel": "206",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 207,
+    "displayLabel": "207",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 208,
+    "displayLabel": "208",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 209,
+    "displayLabel": "209",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 210,
+    "displayLabel": "210",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 211,
+    "displayLabel": "211",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 212,
+    "displayLabel": "212",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 213,
+    "displayLabel": "213",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 214,
+    "displayLabel": "214",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 215,
+    "displayLabel": "215",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 216,
+    "displayLabel": "216",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 217,
+    "displayLabel": "217",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 218,
+    "displayLabel": "218",
+    "optimalTurns": 4,
+    "difficulty": 5,
+    "score": 9
+  },
+  {
+    "levelId": 219,
+    "displayLabel": "219",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 220,
+    "displayLabel": "220",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 221,
+    "displayLabel": "221",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 222,
+    "displayLabel": "222",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 223,
+    "displayLabel": "223",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 224,
+    "displayLabel": "224",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 225,
+    "displayLabel": "225",
+    "optimalTurns": 4,
+    "difficulty": 6,
+    "score": 10
+  },
+  {
+    "levelId": 226,
+    "displayLabel": "226",
+    "optimalTurns": 5,
+    "difficulty": 9,
+    "score": 14
+  },
+  {
+    "levelId": 227,
+    "displayLabel": "227",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 228,
+    "displayLabel": "228",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 229,
+    "displayLabel": "229",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 230,
+    "displayLabel": "230",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 231,
+    "displayLabel": "231",
+    "optimalTurns": 4,
+    "difficulty": 7,
+    "score": 11
+  },
+  {
+    "levelId": 232,
+    "displayLabel": "232",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 233,
+    "displayLabel": "233",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 234,
+    "displayLabel": "234",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 235,
+    "displayLabel": "235",
+    "optimalTurns": 5,
+    "difficulty": 6,
+    "score": 11
+  },
+  {
+    "levelId": 236,
+    "displayLabel": "236",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 237,
+    "displayLabel": "237",
+    "optimalTurns": 5,
+    "difficulty": 5,
+    "score": 10
+  },
+  {
+    "levelId": 238,
+    "displayLabel": "238",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 239,
+    "displayLabel": "239",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 240,
+    "displayLabel": "240",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 241,
+    "displayLabel": "241",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 242,
+    "displayLabel": "242",
+    "optimalTurns": 6,
+    "difficulty": 10,
+    "score": 16
+  },
+  {
+    "levelId": 243,
+    "displayLabel": "243",
+    "optimalTurns": 6,
+    "difficulty": 5,
+    "score": 11
+  },
+  {
+    "levelId": 244,
+    "displayLabel": "244",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 245,
+    "displayLabel": "245",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 246,
+    "displayLabel": "246",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 247,
+    "displayLabel": "247",
+    "optimalTurns": 5,
+    "difficulty": 8,
+    "score": 13
+  },
+  {
+    "levelId": 248,
+    "displayLabel": "248",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 249,
+    "displayLabel": "249",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 250,
+    "displayLabel": "250",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 251,
+    "displayLabel": "251",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 252,
+    "displayLabel": "252",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 253,
+    "displayLabel": "253",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 254,
+    "displayLabel": "254",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 255,
+    "displayLabel": "255",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 256,
+    "displayLabel": "256",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 257,
+    "displayLabel": "257",
+    "optimalTurns": 5,
+    "difficulty": 7,
+    "score": 12
+  },
+  {
+    "levelId": 258,
+    "displayLabel": "258",
+    "optimalTurns": 6,
+    "difficulty": 6,
+    "score": 12
+  },
+  {
+    "levelId": 259,
+    "displayLabel": "259",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 260,
+    "displayLabel": "260",
+    "optimalTurns": 6,
+    "difficulty": 10,
+    "score": 16
+  },
+  {
+    "levelId": 261,
+    "displayLabel": "261",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 262,
+    "displayLabel": "262",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 263,
+    "displayLabel": "263",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 264,
+    "displayLabel": "264",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 265,
+    "displayLabel": "265",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 266,
+    "displayLabel": "266",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 267,
+    "displayLabel": "267",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 268,
+    "displayLabel": "268",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 269,
+    "displayLabel": "269",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 270,
+    "displayLabel": "270",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 271,
+    "displayLabel": "271",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 272,
+    "displayLabel": "272",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 273,
+    "displayLabel": "273",
+    "optimalTurns": 5,
+    "difficulty": 9,
+    "score": 14
+  },
+  {
+    "levelId": 274,
+    "displayLabel": "274",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 275,
+    "displayLabel": "275",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 276,
+    "displayLabel": "276",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 277,
+    "displayLabel": "277",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 278,
+    "displayLabel": "278",
+    "optimalTurns": 6,
+    "difficulty": 10,
+    "score": 16
+  },
+  {
+    "levelId": 279,
+    "displayLabel": "279",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 280,
+    "displayLabel": "280",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 281,
+    "displayLabel": "281",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 282,
+    "displayLabel": "282",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 283,
+    "displayLabel": "283",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 284,
+    "displayLabel": "284",
+    "optimalTurns": 6,
+    "difficulty": 7,
+    "score": 13
+  },
+  {
+    "levelId": 285,
+    "displayLabel": "285",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 286,
+    "displayLabel": "286",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 287,
+    "displayLabel": "287",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 288,
+    "displayLabel": "288",
+    "optimalTurns": 6,
+    "difficulty": 9,
+    "score": 15
+  },
+  {
+    "levelId": 289,
+    "displayLabel": "289",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 290,
+    "displayLabel": "290",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 291,
+    "displayLabel": "291",
+    "optimalTurns": 7,
+    "difficulty": 8,
+    "score": 15
+  },
+  {
+    "levelId": 292,
+    "displayLabel": "292",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 293,
+    "displayLabel": "293",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 294,
+    "displayLabel": "294",
+    "optimalTurns": 6,
+    "difficulty": 8,
+    "score": 14
+  },
+  {
+    "levelId": 295,
+    "displayLabel": "295",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 296,
+    "displayLabel": "296",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 297,
+    "displayLabel": "297",
+    "optimalTurns": 7,
+    "difficulty": 8,
+    "score": 15
+  },
+  {
+    "levelId": 298,
+    "displayLabel": "298",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 299,
+    "displayLabel": "299",
+    "optimalTurns": 7,
+    "difficulty": 9,
+    "score": 16
+  },
+  {
+    "levelId": 300,
+    "displayLabel": "300",
+    "optimalTurns": 8,
+    "difficulty": 10,
+    "score": 18
+  },
+  {
+    "levelId": 901,
+    "displayLabel": "0-1",
+    "optimalTurns": 1,
+    "difficulty": 1,
+    "score": 2
+  },
+  {
+    "levelId": 902,
+    "displayLabel": "0-2",
+    "optimalTurns": 1,
+    "difficulty": 1,
+    "score": 2
+  },
+  {
+    "levelId": 903,
+    "displayLabel": "0-3",
+    "optimalTurns": 1,
+    "difficulty": 1,
+    "score": 2
+  },
+  {
+    "levelId": 904,
+    "displayLabel": "0-4",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 905,
+    "displayLabel": "0-5",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 906,
+    "displayLabel": "0-6",
+    "optimalTurns": 3,
+    "difficulty": 1,
+    "score": 4
+  },
+  {
+    "levelId": 907,
+    "displayLabel": "0-7",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 908,
+    "displayLabel": "0-8",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 909,
+    "displayLabel": "0-9",
+    "optimalTurns": 2,
+    "difficulty": 2,
+    "score": 4
+  },
+  {
+    "levelId": 910,
+    "displayLabel": "0-10",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 911,
+    "displayLabel": "0-11",
+    "optimalTurns": 4,
+    "difficulty": 2,
+    "score": 6
+  },
+  {
+    "levelId": 912,
+    "displayLabel": "0-12",
+    "optimalTurns": 2,
+    "difficulty": 1,
+    "score": 3
+  },
+  {
+    "levelId": 913,
+    "displayLabel": "0-13",
+    "optimalTurns": 3,
+    "difficulty": 2,
+    "score": 5
+  },
+  {
+    "levelId": 914,
+    "displayLabel": "0-14",
+    "optimalTurns": 1,
+    "difficulty": 1,
+    "score": 2
+  },
+  {
+    "levelId": 915,
+    "displayLabel": "0-15",
+    "optimalTurns": 3,
+    "difficulty": 1,
+    "score": 4
+  }
+]

@@ -18,10 +18,12 @@ import 'time_attack_result_screen.dart';
 
 class TimeAttackGameScreen extends StatefulWidget {
   final List<ChallengeLevel> sequence;
+  final String? runId;
 
   const TimeAttackGameScreen({
     super.key,
     required this.sequence,
+    this.runId,
   });
 
   @override
@@ -121,7 +123,10 @@ class _TimeAttackGameScreenState extends State<TimeAttackGameScreen>
     final runState = _taProvider.state;
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => TimeAttackResultScreen(runState: runState),
+        builder: (_) => TimeAttackResultScreen(
+          runState: runState,
+          runId: widget.runId,
+        ),
       ),
     );
   }

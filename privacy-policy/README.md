@@ -1,37 +1,22 @@
 # q-reversi Privacy Policy
 
-`index.md` は、GitHub Pagesでそのまま公開できる最小構成のプライバシーポリシーです。
+`index.md` は、GitHub Pagesでそのまま公開できるプライバシーポリシーです（角括弧のプレースホルダなし）。
 
-## 使い方
+## 公開手順（既存リポジトリがある場合）
 
-1. `index.md` の角括弧（`[ ]`）を実情報で置換
-2. 最終更新日を更新
-3. GitHubにPush
+1. この `index.md` を公開用リポジトリ（例: `q-reversi-privacy-policy`）のルートに反映
+2. Push
+3. GitHub `Settings` > `Pages` で `main` / `/ (root)` が有効であることを確認
+4. 公開URL（例: https://qtechgaming.github.io/q-reversi-privacy-policy/ ）をストア申請に設定
 
-## GitHub公開の最小構成
-
-公開専用リポジトリを作る場合の最小ファイルは以下です。
-
-- `index.md`（このポリシー本文）
-
-### 公開手順（Web UI）
-
-1. GitHubで新規リポジトリ作成（https://github.com/qtechgaming/q-reversi-privacy-policy）
-2. ルートに `index.md` をアップロード
-3. `Settings` > `Pages`
-4. `Build and deployment` を `Deploy from a branch`
-5. Branchを `main` / Folderを `/ (root)` にして保存
-6. 発行されたURLをストア申請情報に設定
-
-### 公開手順（CLI）
+## 公開手順（CLI例）
 
 ```bash
-git init
+# 公開用リポジトリの作業ディレクトリで
+cp /path/to/q-reversi/privacy-policy/index.md ./index.md
 git add index.md
-git commit -m "Add privacy policy for q-reversi"
-git branch -M main
-git remote add origin https://github.com/<your-account>/q-reversi-privacy-policy.git
-git push -u origin main
+git commit -m "Update privacy policy for Firebase ranking features"
+git push
 ```
 
-Push後にGitHubリポジトリの `Settings` > `Pages` で、`main` / `/ (root)` を指定して公開します。
+Push後、Pagesの反映まで数分かかることがあります。

@@ -1,0 +1,42 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "qreversi",
+          "appId": "1:221598186365:android:8c8a34487ea532f2356a14",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "qreversi",
+          "configurations": {
+            "android": "1:221598186365:android:8c8a34487ea532f2356a14",
+            "ios": "1:221598186365:ios:cbdf95f540abe565356a14",
+            "web": "1:221598186365:web:eb60477f704f1c95356a14"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

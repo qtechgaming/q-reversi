@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "221598186365",
+    "project_id": "qreversi",
+    "storage_bucket": "qreversi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:221598186365:android:8c8a34487ea532f2356a14",
+        "android_client_info": {
+          "package_name": "com.qreversi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAP_jxXBOTKu9YyyPL1pA2Aw0opeJLGa2k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

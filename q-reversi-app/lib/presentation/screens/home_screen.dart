@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'game_mode_selection_screen.dart';
 
 /// ホーム画面
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-  
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String? _versionLabel;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() {
+      _versionLabel = 'v${info.version}';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +75,8 @@ class HomeScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const GameModeSelectionScreen(),
+                            builder: (context) =>
+                                const GameModeSelectionScreen(),
                           ),
                         );
                       },
@@ -80,6 +103,21 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (_versionLabel != null)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 16,
+                      child: Text(
+                        _versionLabel!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                 ],
               );
             },
@@ -89,4 +127,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-

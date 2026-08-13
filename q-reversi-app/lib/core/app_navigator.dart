@@ -10,7 +10,10 @@ class AppNavigator {
   static final GlobalKey<NavigatorState> key = GlobalKey<NavigatorState>();
 
   /// VSモード設定画面の [RouteSettings.name]
-  static const String vsSetupRouteName = '/vs_setup';
+  ///
+  /// 先頭に `/` を付けない（Web で URL に載り、ホットリスタート時に
+  /// 「Could not navigate to initial route」になるのを避ける）
+  static const String vsSetupRouteName = 'vs_setup';
 
   /// 対戦画面を閉じ、直下の VS モード設定へ戻る（iOS では右へスワイプアウト）。
   /// 設定がスタックに無い場合のみ新規 push。保存済み途中盤は削除。

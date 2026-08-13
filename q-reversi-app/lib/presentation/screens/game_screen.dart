@@ -22,9 +22,11 @@ import '../widgets/gate_button.dart';
 import '../widgets/operation_order_settings_dialog.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/vs_play_guide_overlay.dart';
+import 'vs_quantum_leaderboard_screen.dart';
 
 enum _ResultPreview {
   cpuWin,
+  cpuQuantumWin,
   cpuLoss,
   cpuDraw,
   pvpWhiteWin,
@@ -1713,7 +1715,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             ? const Color(0xFFA855F7)
             : const Color(0xFF06B6D4);
 
-    await _showAnimatedGameResultDialog(
+    final openRanking = await _showAnimatedGameResultDialog(
       context: context,
       result: result,
       whiteCount: whiteCount,
@@ -1723,7 +1725,17 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       isVsCpu: vsCpu,
       playerWon: playerWon,
       resultLabel: resultLabel,
+      showRankingButton: vsCpu &&
+          playerWon &&
+          cpuDifficulty == AIDifficulty.quantum,
     );
+    if (openRanking == true && context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const VsQuantumLeaderboardScreen(),
+        ),
+      );
+    }
   }
 
   Future<void> _showDebugMenu(BuildContext context) async {
@@ -1750,6 +1762,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
             dialogContext,
             label: 'CPU戦：勝利',
             value: _ResultPreview.cpuWin,
+          ),
+          _buildPreviewOption(
+            dialogContext,
+            label: 'CPU戦：量子AI勝利（ランキングへ）',
+            value: _ResultPreview.cpuQuantumWin,
           ),
           _buildPreviewOption(
             dialogContext,
@@ -1817,6 +1834,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     switch (preview) {
       case _ResultPreview.cpuWin:
+      case _ResultPreview.cpuQuantumWin:
         result = '勝利！';
         resultLabel = 'VICTORY';
         whiteCount = 18;
@@ -1861,8 +1879,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         : isVsCpu && !playerWon
             ? const Color(0xFFA855F7)
             : const Color(0xFF06B6D4);
+    final showRankingButton = preview == _ResultPreview.cpuQuantumWin;
 
-    await _showAnimatedGameResultDialog(
+    final openRanking = await _showAnimatedGameResultDialog(
       context: context,
       result: result,
       whiteCount: whiteCount,
@@ -1872,10 +1891,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       isVsCpu: isVsCpu,
       playerWon: playerWon,
       resultLabel: resultLabel,
+      showRankingButton: showRankingButton,
     );
+    if (openRanking == true && context.mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const VsQuantumLeaderboardScreen(),
+        ),
+      );
+    }
   }
 
-  Future<void> _showAnimatedGameResultDialog({
+  Future<bool?> _showAnimatedGameResultDialog({
     required BuildContext context,
     required String result,
     required int whiteCount,
@@ -1885,8 +1912,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     required bool isVsCpu,
     required bool playerWon,
     required String resultLabel,
+    bool showRankingButton = false,
   }) {
-    return showGeneralDialog<void>(
+    return showGeneralDialog<bool>(
       context: context,
       barrierDismissible: false,
       barrierLabel: '対戦結果',
@@ -1903,6 +1931,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           isVsCpu: isVsCpu,
           playerWon: playerWon,
           resultLabel: resultLabel,
+          showRankingButton: showRankingButton,
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
@@ -1932,6 +1961,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     required bool isVsCpu,
     required bool playerWon,
     required String resultLabel,
+    bool showRankingButton = false,
   }) {
     final winnerType = whiteCount > blackCount
         ? PieceType.white
@@ -2079,7 +2109,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(context, false),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     backgroundColor: accentColor,
@@ -2099,6 +2129,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
+              if (showRankingButton) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context, true),
+                    icon: const Icon(Icons.emoji_events, size: 20),
+                    label: const Text(
+                      'ランキングへ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFFFD54F),
+                      side: const BorderSide(
+                        color: Color(0xFFFFD54F),
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
