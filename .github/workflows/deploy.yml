@@ -24,7 +24,13 @@ jobs:
 
       - name: Build Flutter web
         working-directory: q-reversi-app
-        run: flutter build web --base-href "/q-reversi/" --release
+        env:
+          RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
+        run: >
+          flutter build web
+          --base-href "/q-reversi/"
+          --release
+          --dart-define=RECAPTCHA_SITE_KEY=${{ secrets.RECAPTCHA_SITE_KEY }}
 
       - name: Deploy to docs/
         run: |
