@@ -20,13 +20,16 @@ class DefaultTimeAttackLeaderboardRepository
   final TimeAttackLeaderboardRepository _fallback;
   final bool _useFakeOnly;
 
+  /// Firestore / App Check が返ってこない場合にスピナー固定になるのを防ぐ
+  static const _fetchTimeout = Duration(seconds: 12);
+
   @override
   Future<TimeAttackLeaderboardSnapshot> fetchLeaderboard() async {
     if (_useFakeOnly) {
       return _fallback.fetchLeaderboard();
     }
     try {
-      return await _primary.fetchLeaderboard();
+      return await _primary.fetchLeaderboard().timeout(_fetchTimeout);
     } catch (e, st) {
       debugPrint('Firestore leaderboard failed, fallback to fake: $e\n$st');
       return _fallback.fetchLeaderboard();

@@ -16,12 +16,17 @@ class FirestoreTimeAttackLeaderboardRepository
 
   static const _docPath = 'leaderboards/global';
 
+  static const _opTimeout = Duration(seconds: 10);
+
   @override
   Future<TimeAttackLeaderboardSnapshot> fetchLeaderboard() async {
-    await _ensureAuth();
+    await _ensureAuth().timeout(_opTimeout);
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Firestore leaderboard requires signed-in user');
+    }
 
-    final snap = await _firestore.doc(_docPath).get();
+    final snap = await _firestore.doc(_docPath).get().timeout(_opTimeout);
     final data = snap.data();
     final rawEntries = (data?['entries'] as List<dynamic>?) ?? const [];
 
@@ -52,7 +57,7 @@ class FirestoreTimeAttackLeaderboardRepository
           comboBonus: (map['comboBonus'] as num?)?.toInt() ?? 0,
           timeBonusPoints: (map['timeBonus'] as num?)?.toInt() ?? 0,
           achievedAt: achievedAt,
-          isMe: uid != null && entryUid == uid,
+          isMe: entryUid == uid,
         ),
       );
     }
@@ -60,7 +65,7 @@ class FirestoreTimeAttackLeaderboardRepository
     entries.sort(_compareEntries);
 
     final hasMe = entries.any((e) => e.isMe);
-    if (!hasMe && uid != null) {
+    if (!hasMe) {
       final synthetic = await _syntheticMeFromUserDoc(uid);
       if (synthetic != null) {
         entries.add(synthetic);
@@ -70,9 +75,7 @@ class FirestoreTimeAttackLeaderboardRepository
 
     final limited = entries.take(1000).toList();
     // TOP1000 に入れなかった自分はフッター用にだけ末尾へ（myRank=null → 1000+）
-    if (uid != null &&
-        !limited.any((e) => e.isMe) &&
-        entries.any((e) => e.isMe)) {
+    if (!limited.any((e) => e.isMe) && entries.any((e) => e.isMe)) {
       limited.add(entries.firstWhere((e) => e.isMe));
     }
 
@@ -95,7 +98,11 @@ class FirestoreTimeAttackLeaderboardRepository
 
   Future<TimeAttackLeaderboardEntry?> _syntheticMeFromUserDoc(String uid) async {
     try {
-      final userSnap = await _firestore.collection('users').doc(uid).get();
+      final userSnap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get()
+          .timeout(_opTimeout);
       final data = userSnap.data();
       if (data == null) return null;
       final bestScore = (data['bestTotalScore'] as num?)?.toInt();

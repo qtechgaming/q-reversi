@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/game_mode.dart';
 import '../../domain/services/vs_cpu_progress_service.dart';
@@ -25,19 +26,29 @@ class FirestoreVsQuantumLeaderboardRepository
 
   static const _docPath = 'leaderboards/vs_quantum';
 
+  static const _opTimeout = Duration(seconds: 10);
+
   @override
   Future<VsQuantumLeaderboardSnapshot> fetchLeaderboard() async {
-    await _ensureAuth();
+    await _ensureAuth().timeout(_opTimeout);
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('VS leaderboard requires signed-in user');
+    }
 
     final localSnap = await _progress.load();
     final localWins =
         (localSnap.stats[AIDifficulty.quantum] ?? const VsCpuStats()).wins;
     if (localWins > 0) {
-      await _remote.syncWins(localWins);
+      // sync 失敗・ハングでも一覧表示は続行する
+      try {
+        await _remote.syncWins(localWins).timeout(_opTimeout);
+      } catch (e) {
+        debugPrint('VS quantum syncWins skipped: $e');
+      }
     }
 
-    final snap = await _firestore.doc(_docPath).get();
+    final snap = await _firestore.doc(_docPath).get().timeout(_opTimeout);
     final data = snap.data();
     final rawEntries = (data?['entries'] as List<dynamic>?) ?? const [];
 
@@ -56,7 +67,7 @@ class FirestoreVsQuantumLeaderboardRepository
               : 'Player',
           wins: (map['wins'] as num?)?.toInt() ?? 0,
           achievedAt: _parseAchievedAt(map['achievedAt']),
-          isMe: uid != null && entryUid == uid,
+          isMe: entryUid == uid,
         ),
       );
     }
@@ -64,7 +75,7 @@ class FirestoreVsQuantumLeaderboardRepository
     entries.sort(_compareEntries);
 
     final hasMe = entries.any((e) => e.isMe);
-    if (!hasMe && uid != null) {
+    if (!hasMe) {
       final synthetic = await _syntheticMeFromUserDoc(uid, localWins);
       if (synthetic != null) {
         entries.add(synthetic);
@@ -73,9 +84,7 @@ class FirestoreVsQuantumLeaderboardRepository
     }
 
     final limited = entries.take(1000).toList();
-    if (uid != null &&
-        !limited.any((e) => e.isMe) &&
-        entries.any((e) => e.isMe)) {
+    if (!limited.any((e) => e.isMe) && entries.any((e) => e.isMe)) {
       limited.add(entries.firstWhere((e) => e.isMe));
     }
 

@@ -20,13 +20,16 @@ class DefaultVsQuantumLeaderboardRepository
   final VsQuantumLeaderboardRepository _fallback;
   final bool _useFakeOnly;
 
+  /// sync / Firestore がハングしたときにスピナー固定になるのを防ぐ
+  static const _fetchTimeout = Duration(seconds: 12);
+
   @override
   Future<VsQuantumLeaderboardSnapshot> fetchLeaderboard() async {
     if (_useFakeOnly) {
       return _fallback.fetchLeaderboard();
     }
     try {
-      return await _primary.fetchLeaderboard();
+      return await _primary.fetchLeaderboard().timeout(_fetchTimeout);
     } catch (e, st) {
       debugPrint('VS quantum leaderboard failed, fallback to fake: $e\n$st');
       return _fallback.fetchLeaderboard();
