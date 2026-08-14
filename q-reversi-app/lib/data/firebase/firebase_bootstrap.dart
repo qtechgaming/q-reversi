@@ -59,10 +59,16 @@ class FirebaseBootstrap {
     return ReCaptchaV3Provider(recaptchaSiteKey);
   }
 
-  static Future<User?> signInAnonymously() async {
+  static Future<User?> signInAnonymously({bool forceNew = false}) async {
     final auth = FirebaseAuth.instance;
-    final existing = auth.currentUser;
-    if (existing != null) return existing;
+    if (forceNew) {
+      try {
+        await auth.signOut();
+      } catch (_) {}
+    } else {
+      final existing = auth.currentUser;
+      if (existing != null) return existing;
+    }
 
     final credential = await auth.signInAnonymously();
     return credential.user;

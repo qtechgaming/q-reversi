@@ -24,6 +24,12 @@ export const setPlayerName = onCall(
       if (message === "name already taken") {
         throw new HttpsError("already-exists", message);
       }
+      if (message === "name contains prohibited words") {
+        throw new HttpsError(
+          "invalid-argument",
+          "使用できない言葉が含まれています",
+        );
+      }
       if (message.startsWith("name ")) {
         throw new HttpsError("invalid-argument", message);
       }

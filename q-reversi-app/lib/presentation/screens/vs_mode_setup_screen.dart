@@ -78,9 +78,6 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
     });
   }
 
-  bool get _isQuantumUnlocked =>
-      _cpuProgress?.isUnlocked(AIDifficulty.quantum) ?? false;
-
   String _difficultyTitle(AIDifficulty d) {
     switch (d) {
       case AIDifficulty.beginner:
@@ -561,37 +558,36 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
-              if (_isQuantumUnlocked) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const VsQuantumLeaderboardScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.emoji_events, size: 22),
-                  label: const Text(
-                    'VS量子AI RANKING',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+              // 量子AI対戦の解放前でも閲覧可（対戦解放自体は従来どおり進行条件）
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const VsQuantumLeaderboardScreen(),
                     ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFD54F),
-                    backgroundColor:
-                        const Color(0xFFFFD54F).withValues(alpha: 0.12),
-                    side: const BorderSide(
-                      color: Color(0xFFFFD54F),
-                      width: 1.5,
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  );
+                },
+                icon: const Icon(Icons.emoji_events, size: 22),
+                label: const Text(
+                  'VS量子AI RANKING',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
                   ),
                 ),
-              ],
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFFD54F),
+                  backgroundColor:
+                      const Color(0xFFFFD54F).withValues(alpha: 0.12),
+                  side: const BorderSide(
+                    color: Color(0xFFFFD54F),
+                    width: 1.5,
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
             ],
           ),
         ),

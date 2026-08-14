@@ -200,4 +200,17 @@ class VsCpuProgressService {
     await save(snapshot);
     return snapshot;
   }
+
+  /// 量子AIランキングに載る勝利数だけをリセット（難易度解放は残す）
+  Future<void> clearQuantumRankingStats() async {
+    final latest = await load();
+    final nextStats = Map<AIDifficulty, VsCpuStats>.from(latest.stats);
+    nextStats[AIDifficulty.quantum] = const VsCpuStats();
+    await save(
+      VsCpuProgressSnapshot(
+        unlockedMaxIndex: latest.unlockedMaxIndex,
+        statsIn: nextStats,
+      ),
+    );
+  }
 }

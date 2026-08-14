@@ -44,6 +44,12 @@ flutter run -d chrome
 Settings → Pages → Branch: `main` / Folder: `/docs` に設定してください。
 `q-reversi-app/` への変更を push すると自動でビルド・デプロイされます。
 
+## 利用者データの削除
+
+ランキング等のサーバー上データを削除したい場合、利用者はサポート窓口へプレイヤー名を添えて連絡します。
+
+運営者がサーバー上の該当データを削除する手順は [q-reversi-app/functions/README.md](q-reversi-app/functions/README.md) を参照してください。認証情報や秘密鍵はリポジトリに含めません。
+
 ## License
 
 This project is licensed under the Apache License 2.0.

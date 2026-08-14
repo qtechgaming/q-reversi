@@ -7,8 +7,10 @@
   },
   "scripts": {
     "build": "tsc",
+    "generate:ng-words": "node scripts/generate_ng_words.js",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "delete-user": "npm run build && node lib/admin/deleteUserDataCli.js"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",

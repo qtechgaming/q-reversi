@@ -5,6 +5,7 @@ import {
   Firestore,
   getFirestore,
 } from "firebase-admin/firestore";
+import { containsNgWord } from "./ngWords";
 
 const MAX_NAME_LENGTH = 12;
 /** transaction 内の get 上限に余裕を持たせる */
@@ -31,6 +32,9 @@ export function validatePlayerName(raw: unknown): string {
     if (trimmed[i] === "/") {
       throw new Error("name must not contain '/'");
     }
+  }
+  if (containsNgWord(trimmed)) {
+    throw new Error("name contains prohibited words");
   }
   return trimmed;
 }

@@ -87,6 +87,7 @@ class _NicknameDialogState extends State<_NicknameDialog> {
           NicknameSetResult.invalid =>
             '${TimeAttackLocalProfileService.minNicknameLength}〜${TimeAttackLocalProfileService.maxNicknameLength}文字で入力してください',
           NicknameSetResult.taken => 'その名前はすでに使われています',
+          NicknameSetResult.blocked => '使用できない言葉が含まれています',
           NicknameSetResult.failed => '保存に失敗しました',
           NicknameSetResult.ok => null,
         };

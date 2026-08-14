@@ -14,6 +14,7 @@ import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
 import '../widgets/operation_order_settings_dialog.dart';
+import '../widgets/app_legal_info_sheet.dart';
 import 'time_attack_start_screen.dart';
 
 /// ゲームモード選択画面
@@ -109,6 +110,11 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            tooltip: 'ヘルプ・情報',
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => showAppLegalInfoSheet(context),
+          ),
           IconButton(
             tooltip: '操作設定',
             icon: const Icon(Icons.settings_outlined),

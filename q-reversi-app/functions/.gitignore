@@ -3,3 +3,7 @@ lib/
 *.local
 firebase-debug.log
 firebase-debug.*.log
+*service-account*.json
+
+# Temporary downloads for NG-word generation
+scripts/_*.txt

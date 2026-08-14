@@ -5,11 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/firebase/time_attack_player_remote_service.dart';
 import '../../data/firebase/time_attack_run_remote_service.dart';
+import '../time_attack/ng_word_list.dart';
 import '../time_attack/time_attack_personal_best.dart';
 import '../time_attack/time_attack_player_identity.dart';
 import '../time_attack/time_attack_run_state.dart';
 
-enum NicknameSetResult { ok, invalid, taken, failed }
+enum NicknameSetResult { ok, invalid, taken, blocked, failed }
 
 /// UID・ニックネーム・自己ベストのローカル保存
 ///
@@ -91,6 +92,9 @@ class TimeAttackLocalProfileService {
   }) async {
     final validated = validateNickname(raw);
     if (validated == null) return NicknameSetResult.invalid;
+    if (NgWordList.containsNgWord(validated)) {
+      return NicknameSetResult.blocked;
+    }
 
     final current = await getSavedNickname();
     if (TimeAttackPlayerIdentity.isTaken(
@@ -110,6 +114,9 @@ class TimeAttackLocalProfileService {
         final msg = e.message;
         if (msg.contains('すでに使われています')) {
           return NicknameSetResult.taken;
+        }
+        if (msg.contains('使用できない言葉')) {
+          return NicknameSetResult.blocked;
         }
         return NicknameSetResult.failed;
       } catch (_) {
@@ -181,5 +188,15 @@ class TimeAttackLocalProfileService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// ランキング関連の端末内データ（表示名・自己ベスト・ローカルUID）を消す
+  Future<void> clearRankingLocalData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_nicknameKey);
+      await prefs.remove(_personalBestKey);
+      await prefs.remove(_uidKey);
+    } catch (_) {}
   }
 }

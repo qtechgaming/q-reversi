@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Local JVM truststore (Norton HTTPS scan workaround)
+.jdk-trust/

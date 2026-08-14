@@ -12,3 +12,4 @@ export { startTimeAttackRun } from "./time_attack/startTimeAttackRun";
 export { submitTimeAttackRun } from "./time_attack/submitTimeAttackRun";
 export { setPlayerName } from "./time_attack/setPlayerName";
 export { syncVsQuantumWins } from "./vs/syncVsQuantumWins";
+export { deleteMyRankingData } from "./privacy/deleteMyRankingData";
