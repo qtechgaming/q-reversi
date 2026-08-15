@@ -3,9 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/game_mode.dart';
+import '../../domain/services/time_attack_local_profile_service.dart';
 import '../../domain/services/vs_cpu_progress_service.dart';
 import '../../domain/vs/vs_quantum_leaderboard_entry.dart';
 import '../firebase/firebase_bootstrap.dart';
+import '../firebase/firestore_get_with_retry.dart';
 import '../firebase/vs_quantum_remote_service.dart';
 import 'vs_quantum_leaderboard_repository.dart';
 
@@ -30,7 +32,7 @@ class FirestoreVsQuantumLeaderboardRepository
 
   @override
   Future<VsQuantumLeaderboardSnapshot> fetchLeaderboard() async {
-    await _ensureAuth().timeout(_opTimeout);
+    await _ensureAuth();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       throw StateError('VS leaderboard requires signed-in user');
@@ -42,13 +44,18 @@ class FirestoreVsQuantumLeaderboardRepository
     if (localWins > 0) {
       // sync 失敗・ハングでも一覧表示は続行する
       try {
-        await _remote.syncWins(localWins).timeout(_opTimeout);
+        final syncedName =
+            await _remote.syncWins(localWins).timeout(_opTimeout);
+        if (syncedName != null && syncedName.isNotEmpty) {
+          await TimeAttackLocalProfileService()
+              .saveConfirmedNickname(syncedName);
+        }
       } catch (e) {
         debugPrint('VS quantum syncWins skipped: $e');
       }
     }
 
-    final snap = await _firestore.doc(_docPath).get().timeout(_opTimeout);
+    final snap = await FirestoreGetWithRetry.getDoc(_firestore, _docPath);
     final data = snap.data();
     final rawEntries = (data?['entries'] as List<dynamic>?) ?? const [];
 
@@ -88,7 +95,17 @@ class FirestoreVsQuantumLeaderboardRepository
       limited.add(entries.firstWhere((e) => e.isMe));
     }
 
-    return VsQuantumLeaderboardSnapshot(rankedEntries: limited);
+    final snapshot = VsQuantumLeaderboardSnapshot(rankedEntries: limited);
+    await _syncMyNickname(snapshot);
+    return snapshot;
+  }
+
+  Future<void> _syncMyNickname(VsQuantumLeaderboardSnapshot snapshot) async {
+    final name = snapshot.myEntry?.nickname.trim();
+    if (name == null || name.isEmpty || name == 'Player') return;
+    try {
+      await TimeAttackLocalProfileService().saveConfirmedNickname(name);
+    } catch (_) {}
   }
 
   static int _compareEntries(
@@ -101,8 +118,8 @@ class FirestoreVsQuantumLeaderboardRepository
   }
 
   Future<void> _ensureAuth() async {
-    if (FirebaseAuth.instance.currentUser != null) return;
-    await FirebaseBootstrap.signInAnonymously();
+    await FirebaseBootstrap.ensureSignedIn();
+    await FirebaseBootstrap.waitForAppCheckToken();
   }
 
   DateTime _parseAchievedAt(dynamic raw) {
@@ -118,7 +135,11 @@ class FirestoreVsQuantumLeaderboardRepository
     int localWins,
   ) async {
     try {
-      final userSnap = await _firestore.collection('users').doc(uid).get();
+      final userSnap = await FirestoreGetWithRetry.getDoc(
+        _firestore,
+        'users/$uid',
+        attempts: 2,
+      );
       final data = userSnap.data();
       final serverWins = (data?['vsQuantumWins'] as num?)?.toInt() ?? 0;
       final wins = serverWins > localWins ? serverWins : localWins;

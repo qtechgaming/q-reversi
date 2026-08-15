@@ -20,7 +20,8 @@ class FirebaseBootstrap {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await activateAppCheck();
-    await signInAnonymously();
+    await ensureSignedIn();
+    await waitForAppCheckToken();
   }
 
   /// App Check を有効化（Debug では Debug Provider）
@@ -57,6 +58,59 @@ class FirebaseBootstrap {
       return WebDebugProvider();
     }
     return ReCaptchaV3Provider(recaptchaSiteKey);
+  }
+
+  /// Web では persistence 復元前に currentUser が null になる。
+  /// 復元を待たずに匿名サインインすると別 UID になり、ランキング読み込みが失敗しやすい。
+  static Future<User?> ensureSignedIn({bool forceNew = false}) async {
+    if (forceNew) {
+      return signInAnonymously(forceNew: true);
+    }
+
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser != null) {
+      await _ensureIdToken(auth.currentUser);
+      return auth.currentUser;
+    }
+
+    try {
+      final restored = await auth.authStateChanges().first.timeout(
+        const Duration(seconds: 8),
+      );
+      if (restored != null) {
+        await _ensureIdToken(restored);
+        return restored;
+      }
+    } catch (e) {
+      debugPrint('Firebase Auth restore wait failed: $e');
+    }
+    if (auth.currentUser != null) {
+      await _ensureIdToken(auth.currentUser);
+      return auth.currentUser;
+    }
+
+    final user = await signInAnonymously();
+    await _ensureIdToken(user);
+    return user;
+  }
+
+  static Future<void> waitForAppCheckToken() async {
+    try {
+      await FirebaseAppCheck.instance
+          .getToken()
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      debugPrint('Firebase App Check token wait failed: $e');
+    }
+  }
+
+  static Future<void> _ensureIdToken(User? user) async {
+    if (user == null) return;
+    try {
+      await user.getIdToken();
+    } catch (e) {
+      debugPrint('Firebase Auth getIdToken failed: $e');
+    }
   }
 
   static Future<User?> signInAnonymously({bool forceNew = false}) async {

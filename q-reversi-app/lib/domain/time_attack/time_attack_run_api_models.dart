@@ -132,15 +132,18 @@ class TimeAttackSubmitResponse {
   final String runId;
   final bool alreadyCompleted;
   final TimeAttackOfficialResult officialResult;
+  final String? displayName;
 
   const TimeAttackSubmitResponse({
     required this.runId,
     required this.alreadyCompleted,
     required this.officialResult,
+    this.displayName,
   });
 
   factory TimeAttackSubmitResponse.fromJson(Map<String, dynamic> json) {
     final official = json['officialResult'];
+    final displayName = (json['displayName'] as String?)?.trim();
     return TimeAttackSubmitResponse(
       runId: json['runId'] as String? ?? '',
       alreadyCompleted: json['alreadyCompleted'] as bool? ?? false,
@@ -149,6 +152,9 @@ class TimeAttackSubmitResponse {
             ? Map<String, dynamic>.from(official)
             : <String, dynamic>{},
       ),
+      displayName: displayName == null || displayName.isEmpty
+          ? null
+          : displayName,
     );
   }
 }

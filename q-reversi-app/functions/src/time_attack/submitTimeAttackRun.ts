@@ -65,8 +65,9 @@ export const submitTimeAttackRun = onCall(
         totalScore: number;
         maxCombo: number;
       };
+      let displayName: string | undefined;
       try {
-        const displayName = await ensureDisplayName(uid);
+        displayName = await ensureDisplayName(uid);
         await maybeUpdateLeaderboard({
           uid,
           displayName,
@@ -85,6 +86,7 @@ export const submitTimeAttackRun = onCall(
         runId,
         alreadyCompleted: true,
         officialResult: run.officialResult,
+        displayName,
       };
     }
 
@@ -141,6 +143,7 @@ export const submitTimeAttackRun = onCall(
       runId,
       alreadyCompleted: false,
       officialResult: official,
+      displayName,
     };
   },
 );

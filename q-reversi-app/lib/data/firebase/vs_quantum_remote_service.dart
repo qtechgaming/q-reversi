@@ -21,20 +21,27 @@ class VsQuantumRemoteService {
   final FirebaseFunctions _functions;
 
   Future<void> _ensureAuth() async {
-    if (FirebaseAuth.instance.currentUser != null) return;
-    await FirebaseBootstrap.signInAnonymously();
+    await FirebaseBootstrap.ensureSignedIn();
     if (FirebaseAuth.instance.currentUser == null) {
       throw VsQuantumRemoteException('通信に失敗しました');
     }
   }
 
   /// ローカル勝利数をサーバーへ同期（増分時のみベスト更新）
-  Future<void> syncWins(int wins) async {
-    if (wins < 0) return;
+  Future<String?> syncWins(int wins) async {
+    if (wins < 0) return null;
     await _ensureAuth();
     try {
       final callable = _functions.httpsCallable('syncVsQuantumWins');
-      await callable.call(<String, dynamic>{'wins': wins});
+      final result = await callable.call(<String, dynamic>{'wins': wins});
+      final data = result.data;
+      if (data is Map) {
+        final displayName = (data['displayName'] as String?)?.trim();
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+      }
+      return null;
     } on FirebaseFunctionsException catch (e) {
       throw VsQuantumRemoteException(
         e.message?.isNotEmpty == true ? e.message! : 'ランキング同期に失敗しました',

@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../domain/services/time_attack_local_profile_service.dart';
 import '../../domain/time_attack/time_attack_leaderboard_entry.dart';
 import '../firebase/firebase_bootstrap.dart';
+import '../firebase/firestore_get_with_retry.dart';
 import 'time_attack_leaderboard_repository.dart';
 
 /// `leaderboards/global` を one-shot get する本番実装
@@ -16,17 +18,15 @@ class FirestoreTimeAttackLeaderboardRepository
 
   static const _docPath = 'leaderboards/global';
 
-  static const _opTimeout = Duration(seconds: 10);
-
   @override
   Future<TimeAttackLeaderboardSnapshot> fetchLeaderboard() async {
-    await _ensureAuth().timeout(_opTimeout);
+    await _ensureAuth();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       throw StateError('Firestore leaderboard requires signed-in user');
     }
 
-    final snap = await _firestore.doc(_docPath).get().timeout(_opTimeout);
+    final snap = await FirestoreGetWithRetry.getDoc(_firestore, _docPath);
     final data = snap.data();
     final rawEntries = (data?['entries'] as List<dynamic>?) ?? const [];
 
@@ -79,7 +79,17 @@ class FirestoreTimeAttackLeaderboardRepository
       limited.add(entries.firstWhere((e) => e.isMe));
     }
 
-    return TimeAttackLeaderboardSnapshot(rankedEntries: limited);
+    final snapshot = TimeAttackLeaderboardSnapshot(rankedEntries: limited);
+    await _syncMyNickname(snapshot);
+    return snapshot;
+  }
+
+  Future<void> _syncMyNickname(TimeAttackLeaderboardSnapshot snapshot) async {
+    final name = snapshot.myEntry?.nickname.trim();
+    if (name == null || name.isEmpty || name == 'Player') return;
+    try {
+      await TimeAttackLocalProfileService().saveConfirmedNickname(name);
+    } catch (_) {}
   }
 
   static int _compareEntries(
@@ -92,17 +102,17 @@ class FirestoreTimeAttackLeaderboardRepository
   }
 
   Future<void> _ensureAuth() async {
-    if (FirebaseAuth.instance.currentUser != null) return;
-    await FirebaseBootstrap.signInAnonymously();
+    await FirebaseBootstrap.ensureSignedIn();
+    await FirebaseBootstrap.waitForAppCheckToken();
   }
 
   Future<TimeAttackLeaderboardEntry?> _syntheticMeFromUserDoc(String uid) async {
     try {
-      final userSnap = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get()
-          .timeout(_opTimeout);
+      final userSnap = await FirestoreGetWithRetry.getDoc(
+        _firestore,
+        'users/$uid',
+        attempts: 2,
+      );
       final data = userSnap.data();
       if (data == null) return null;
       final bestScore = (data['bestTotalScore'] as num?)?.toInt();

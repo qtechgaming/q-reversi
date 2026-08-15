@@ -1,23 +1,46 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_bootstrap.dart';
+import 'firestore_get_with_retry.dart';
 import 'time_attack_run_remote_service.dart';
 
-/// Cloud Functions 経由のプレイヤー名設定
+/// Cloud Functions / Firestore 経由のプレイヤー名
 class TimeAttackPlayerRemoteService {
   TimeAttackPlayerRemoteService({
     FirebaseFunctions? functions,
-  }) : _functions = functions ??
-            FirebaseFunctions.instanceFor(region: 'asia-northeast1');
+    FirebaseFirestore? firestore,
+  })  : _functions = functions ??
+            FirebaseFunctions.instanceFor(region: 'asia-northeast1'),
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
+  final FirebaseFirestore _firestore;
 
   Future<void> _ensureAuth() async {
-    if (FirebaseAuth.instance.currentUser != null) return;
-    await FirebaseBootstrap.signInAnonymously();
+    await FirebaseBootstrap.ensureSignedIn();
     if (FirebaseAuth.instance.currentUser == null) {
       throw TimeAttackRunRemoteException('通信に失敗しました');
+    }
+  }
+
+  /// `users/{uid}.displayName`。未設定・失敗時は null
+  Future<String?> fetchDisplayName() async {
+    try {
+      await _ensureAuth();
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return null;
+      final snap = await FirestoreGetWithRetry.getDoc(
+        _firestore,
+        'users/$uid',
+        attempts: 2,
+      );
+      final name = (snap.data()?['displayName'] as String?)?.trim();
+      if (name == null || name.isEmpty) return null;
+      return name;
+    } catch (_) {
+      return null;
     }
   }
 

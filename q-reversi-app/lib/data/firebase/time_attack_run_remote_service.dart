@@ -22,8 +22,7 @@ class TimeAttackRunRemoteService {
   final FirebaseFunctions _functions;
 
   Future<void> _ensureAuth() async {
-    if (FirebaseAuth.instance.currentUser != null) return;
-    await FirebaseBootstrap.signInAnonymously();
+    await FirebaseBootstrap.ensureSignedIn();
     if (FirebaseAuth.instance.currentUser == null) {
       throw TimeAttackRunRemoteException(
         'TIME ATTACKの開始には通信が必要です。',

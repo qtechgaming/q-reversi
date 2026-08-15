@@ -66,24 +66,51 @@ class TimeAttackLocalProfileService {
     }
   }
 
-  /// 保存済みならそれ。なければ taken を避けて QMasterN を割り当てて保存する。
-  Future<String> getOrAssignNickname({
-    Iterable<String> takenNames = const [],
-  }) async {
-    final saved = await getSavedNickname();
-    if (saved != null) return saved;
-
-    final name = TimeAttackPlayerIdentity.nextDefaultNickname(takenNames);
+  /// サーバー確定名を端末に保存する（ローカル仮名より優先）。
+  Future<void> saveConfirmedNickname(String raw) async {
+    final name = raw.trim();
+    if (name.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_nicknameKey, name);
     } catch (_) {}
+  }
+
+  /// サーバーの表示名を優先して同期する。失敗時はローカル保存値。
+  ///
+  /// 未確定の QMasterN はここで割り当てない（他プレイヤーと衝突するため）。
+  Future<String?> resolveNickname() async {
+    try {
+      final remote = await TimeAttackPlayerRemoteService().fetchDisplayName();
+      if (remote != null) {
+        await saveConfirmedNickname(remote);
+        return remote;
+      }
+    } catch (_) {}
+    return getSavedNickname();
+  }
+
+  /// 保存済みならそれ。takenNames があるときだけ未使用の QMasterN を仮割り当て。
+  ///
+  /// takenNames が空のときはサーバー同期のみ行い、衝突する仮名は保存しない。
+  Future<String> getOrAssignNickname({
+    Iterable<String> takenNames = const [],
+  }) async {
+    final resolved = await resolveNickname();
+    if (resolved != null) return resolved;
+
+    if (takenNames.isEmpty) {
+      return TimeAttackPlayerIdentity.nextDefaultNickname(const []);
+    }
+
+    final name = TimeAttackPlayerIdentity.nextDefaultNickname(takenNames);
+    await saveConfirmedNickname(name);
     return name;
   }
 
-  Future<String> getNickname() => getOrAssignNickname();
+  Future<String> getNickname() async => (await resolveNickname()) ?? '';
 
-  Future<String> getDisplayNickname() => getOrAssignNickname();
+  Future<String> getDisplayNickname() => getNickname();
 
   Future<NicknameSetResult> setNickname(
     String raw, {
@@ -162,7 +189,6 @@ class TimeAttackLocalProfileService {
   /// 自己ベストを更新できたら true（同点以下は更新しない）
   Future<bool> tryUpdatePersonalBest(TimeAttackRunState runState) async {
     await getLocalUid();
-    await getOrAssignNickname();
 
     final candidate = TimeAttackPersonalBest(
       clearCount: runState.clearCount,

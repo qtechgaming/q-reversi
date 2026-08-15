@@ -28,7 +28,7 @@ class RankingDataDeletionService {
 
   Future<void> deleteAllRankingData() async {
     if (FirebaseAuth.instance.currentUser == null) {
-      await FirebaseBootstrap.signInAnonymously();
+      await FirebaseBootstrap.ensureSignedIn();
     }
     if (FirebaseAuth.instance.currentUser == null) {
       throw TimeAttackRunRemoteException('通信に失敗しました');

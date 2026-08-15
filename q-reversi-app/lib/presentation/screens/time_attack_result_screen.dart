@@ -94,15 +94,21 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
     if (widget.persistResult) {
       isNewBest = await _profile.tryUpdatePersonalBest(runState);
     }
-    final nickname = await _profile.getNickname();
 
     var submitFailed = false;
     String? submitError;
     if (widget.persistResult && widget.runId != null) {
       final payload = _buildPayload();
       try {
-        await _remote.submitRun(runId: widget.runId!, levelResults: payload);
+        final submitted = await _remote.submitRun(
+          runId: widget.runId!,
+          levelResults: payload,
+        );
         await _pendingStore.clear();
+        final assigned = submitted.displayName?.trim();
+        if (assigned != null && assigned.isNotEmpty) {
+          await _profile.saveConfirmedNickname(assigned);
+        }
       } catch (e) {
         await _pendingStore.save(runId: widget.runId!, levelResults: payload);
         submitFailed = true;
@@ -112,17 +118,8 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
       }
     }
 
-    TimeAttackLeaderboardSnapshot? snapshot;
-    try {
-      // 結果画面の順位は自己ベストではなく「今回のスコアなら何位か」の仮表示のみ
-      // （この仮行はクラウド／ローカルのランキング本体には保存しない）
-      final base = await _leaderboardRepo.fetchLeaderboard();
-      snapshot = nickname.isNotEmpty
-          ? _snapshotForThisRunRank(base, nickname)
-          : null;
-    } catch (_) {
-      snapshot = null;
-    }
+    final nickname = await _resolveDisplayNickname();
+    final snapshot = await _loadThisRunSnapshot(nickname);
 
     if (!mounted) return;
     setState(() {
@@ -159,12 +156,23 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
     }
 
     try {
-      await _remote.submitRun(runId: runId, levelResults: payload);
+      final submitted = await _remote.submitRun(
+        runId: runId,
+        levelResults: payload,
+      );
       await _pendingStore.clear();
+      final assigned = submitted.displayName?.trim();
+      if (assigned != null && assigned.isNotEmpty) {
+        await _profile.saveConfirmedNickname(assigned);
+      }
+      final nickname = await _resolveDisplayNickname();
+      final snapshot = await _loadThisRunSnapshot(nickname);
       if (!mounted) return;
       setState(() {
         _submitting = false;
         _submitFailed = false;
+        _nickname = nickname;
+        _snapshot = snapshot ?? _snapshot;
       });
     } catch (e) {
       if (!mounted) return;
@@ -178,8 +186,33 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
     }
   }
 
+  Future<String> _resolveDisplayNickname() async {
+    final resolved = await _profile.resolveNickname();
+    if (resolved != null && resolved.isNotEmpty) return resolved;
+    return (await _profile.getSavedNickname()) ?? '';
+  }
+
+  /// 結果画面の順位は自己ベストではなく「今回のスコアなら何位か」の仮表示のみ
+  Future<TimeAttackLeaderboardSnapshot?> _loadThisRunSnapshot(
+    String nickname,
+  ) async {
+    try {
+      final base = await _leaderboardRepo.fetchLeaderboard();
+      final meName = base.myEntry?.nickname.trim();
+      if (meName != null && meName.isNotEmpty) {
+        await _profile.saveConfirmedNickname(meName);
+      }
+      final displayName =
+          (meName != null && meName.isNotEmpty) ? meName : nickname;
+      if (displayName.isEmpty) return null;
+      return _snapshotForThisRunRank(base, displayName);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _editMyNickname() async {
-    final current = await _profile.getNickname();
+    final current = await _resolveDisplayNickname();
     if (!mounted) return;
     final taken = _snapshot?.rankedEntries
             .where((e) => !e.isMe)
@@ -192,14 +225,8 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
     );
     if (!ok || !mounted) return;
 
-    final nickname = await _profile.getNickname();
-    TimeAttackLeaderboardSnapshot? snapshot;
-    try {
-      final base = await _leaderboardRepo.fetchLeaderboard();
-      snapshot = nickname.isNotEmpty
-          ? _snapshotForThisRunRank(base, nickname)
-          : null;
-    } catch (_) {}
+    final nickname = await _resolveDisplayNickname();
+    final snapshot = await _loadThisRunSnapshot(nickname);
     if (!mounted) return;
     setState(() {
       _nickname = nickname;

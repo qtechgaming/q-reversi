@@ -116,7 +116,9 @@ class _TimeAttackLeaderboardScreenState
 
   Future<void> _editNickname() async {
     final profile = TimeAttackLocalProfileService();
-    final current = await profile.getNickname();
+    final current = await profile.resolveNickname() ??
+        _snapshot?.myEntry?.nickname ??
+        '';
     if (!mounted) return;
     final ok = await showTimeAttackNicknameDialog(
       context,
@@ -308,10 +310,10 @@ class _TimeAttackLeaderboardScreenState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                '読み込みに失敗しました\n$_error',
+              const Text(
+                'ランキングを読み込めませんでした',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: Colors.redAccent),
               ),
               const SizedBox(height: 16),
               ElevatedButton(
