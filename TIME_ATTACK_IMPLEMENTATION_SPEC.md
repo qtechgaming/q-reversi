@@ -6,7 +6,7 @@
 
 対象リポジトリ：
 
-`qtechgaming/q-reversi`
+`q-tech-gaming/q-reversi`
 
 Flutterアプリ：
 

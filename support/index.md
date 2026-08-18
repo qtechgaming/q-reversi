@@ -37,4 +37,4 @@
 
 以下のページをご確認ください。
 
-https://qtechgaming.github.io/q-reversi-privacy-policy/
+https://q-tech-gaming.github.io/q-reversi-privacy-policy/

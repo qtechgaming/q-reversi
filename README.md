@@ -2,7 +2,7 @@
 
 量子ゲート操作で盤面を操る新感覚リバーシ。
 
-**▶ Play:** https://qtechgaming.github.io/q-reversi/
+**▶ Play:** https://q-tech-gaming.github.io/q-reversi/
 
 ## AIレベル
 | レベル | 説明 |

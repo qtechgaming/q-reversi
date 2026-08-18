@@ -7,7 +7,7 @@
 1. この `index.md` を公開用リポジトリ（例: `q-reversi-privacy-policy`）のルートに反映
 2. Push
 3. GitHub `Settings` > `Pages` で `main` / `/ (root)` が有効であることを確認
-4. 公開URL（例: https://qtechgaming.github.io/q-reversi-privacy-policy/ ）をストア申請に設定
+4. 公開URL（例: https://q-tech-gaming.github.io/q-reversi-privacy-policy/ ）をストア申請に設定
 
 ## 公開手順（CLI例）
 

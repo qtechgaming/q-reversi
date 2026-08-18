@@ -110348,10 +110348,10 @@ $1(a){var s=null
 return A.es(!0,new A.aD(B.Oy,A.aA(A.b([A.a_(s,s,B.h,s,s,new A.av(B.f9,s,s,A.aI(2),s,s,B.q),s,4,s,B.rM,s,s,s,40),B.a8H,B.N,A.tY(!1,s,s,s,!0,s,s,s,!0,s,B.PJ,s,s,s,s,new A.aRH(a),!1,s,s,s,s,s,s,s,B.a8R,s,B.tF,s),A.tY(!1,s,s,s,!0,s,s,s,!0,s,B.PO,s,s,s,s,new A.aRI(a),!1,s,s,s,s,s,s,s,B.a9q,s,B.tF,s),B.Na,A.tY(!1,s,s,s,!0,s,s,s,!0,s,B.PR,s,s,s,s,new A.aRJ(a,this.a),!1,s,s,s,s,s,B.a9a,s,B.aa9,s,s,s)],t.p),B.j,B.l,B.E),s),B.U,!0)},
 $S:107}
 A.aRH.prototype={
-$0(){return A.a7H(this.a,"https://qtechgaming.github.io/q-reversi-privacy-policy/")},
+$0(){return A.a7H(this.a,"https://q-tech-gaming.github.io/q-reversi-privacy-policy/")},
 $S:0}
 A.aRI.prototype={
-$0(){return A.a7H(this.a,"https://qtechgaming.github.io/support-ja/")},
+$0(){return A.a7H(this.a,"https://q-tech-gaming.github.io/support-ja/")},
 $S:0}
 A.aRJ.prototype={
 $0(){A.b5(this.a,!1).d1()

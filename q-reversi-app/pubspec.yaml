@@ -1,7 +1,7 @@
 name: q_reversi_app
 description: Q-Reversi - Quantum Computing Reversi Game
-repository: https://github.com/qtechgaming/q-reversi
-homepage: https://qtechgaming.github.io/q-reversi/
+repository: https://github.com/q-tech-gaming/q-reversi
+homepage: https://q-tech-gaming.github.io/q-reversi/
 publish_to: 'none'
 version: 1.4.1+10
 

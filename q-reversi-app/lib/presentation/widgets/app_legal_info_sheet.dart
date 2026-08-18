@@ -7,8 +7,8 @@ import '../../data/firebase/time_attack_run_remote_service.dart';
 /// 公開ドキュメント URL（GitHub Pages）
 abstract final class AppLegalLinks {
   static const privacyPolicy =
-      'https://qtechgaming.github.io/q-reversi-privacy-policy/';
-  static const support = 'https://qtechgaming.github.io/support-ja/';
+      'https://q-tech-gaming.github.io/q-reversi-privacy-policy/';
+  static const support = 'https://q-tech-gaming.github.io/support-ja/';
 
   static Future<bool> open(String url) async {
     final uri = Uri.parse(url);
