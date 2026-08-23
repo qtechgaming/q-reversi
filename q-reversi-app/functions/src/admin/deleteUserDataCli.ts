@@ -13,11 +13,13 @@ function printHelp(): void {
   console.log(`サーバ上の利用者データを削除する管理者用コマンドです。
 既定は確認表示のみ（dry-run）です。実際の削除には --execute が必要です。
 
-使い方:
-  npm run delete-user -- --name "プレイヤー名"
-  npm run delete-user -- --uid "<Firebase UID>"
-  npm run delete-user -- --name "プレイヤー名" --execute
-  npm run delete-user -- --uid "<uid>" --execute --yes
+使い方（Windows では npm run ではなく node を直接実行）:
+  node lib/admin/deleteUserDataCli.js --name "プレイヤー名"
+  node lib/admin/deleteUserDataCli.js --uid "<Firebase UID>"
+  node lib/admin/deleteUserDataCli.js --name "プレイヤー名" --execute
+  node lib/admin/deleteUserDataCli.js --uid "<uid>" --execute --yes
+
+詳細手順は functions/README.md を参照。
 
 オプション:
   --name <表示名>   ランキングのプレイヤー名で検索
