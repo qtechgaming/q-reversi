@@ -1,0 +1,14 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "install": "cd q-reversi-app && flutter pub get",
+  "terminals": [
+    {
+      "name": "Flutter Web",
+      "command": "cd q-reversi-app && flutter run -d web-server --web-port=8080 --web-hostname=0.0.0.0",
+      "ports": [8080]
+    }
+  ]
+}
