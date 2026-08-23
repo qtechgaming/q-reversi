@@ -8,6 +8,7 @@ import '../../domain/entities/board.dart';
 import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
 import '../../domain/services/vs_cpu_progress_service.dart';
+import '../../data/firebase/backend_warmup.dart';
 import 'vs_quantum_leaderboard_screen.dart';
 
 /// VSモード設定画面
@@ -40,12 +41,14 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
   bool _cpuProgressLoading = true;
   bool _humanModeUnlocked = false;
   bool _turnOptionsUnlocked = false;
+  bool _openingRanking = false;
 
   @override
   void initState() {
     super.initState();
     VsModeSetupScreen.progressRefreshTick.addListener(_onProgressRefreshTick);
     _refreshCpuProgress();
+    BackendWarmup.kickoff();
   }
 
   @override
@@ -547,7 +550,8 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () => _startGame(context),
+                onPressed:
+                    _openingRanking ? null : () => _startGame(context),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: const Color(0xFF6B46C1),
@@ -561,17 +565,20 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
               // 量子AI対戦の解放前でも閲覧可（対戦解放自体は従来どおり進行条件）
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const VsQuantumLeaderboardScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.emoji_events, size: 22),
-                label: const Text(
-                  'VS量子AI RANKING',
-                  style: TextStyle(
+                onPressed: _openingRanking ? null : _openRanking,
+                icon: _openingRanking
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFFFD54F),
+                        ),
+                      )
+                    : const Icon(Icons.emoji_events, size: 22),
+                label: Text(
+                  _openingRanking ? '読み込み中…' : 'VS量子AI RANKING',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -593,6 +600,24 @@ class _VsModeSetupScreenState extends State<VsModeSetupScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openRanking() async {
+    if (_openingRanking) return;
+    setState(() => _openingRanking = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const VsQuantumLeaderboardScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingRanking = false);
+      } else {
+        _openingRanking = false;
+      }
+    }
   }
 
   Future<void> _startGame(BuildContext context) async {

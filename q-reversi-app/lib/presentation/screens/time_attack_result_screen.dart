@@ -50,6 +50,8 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
   bool _submitting = false;
   bool _submitFailed = false;
   bool _retrying = false;
+  bool _editingName = false;
+  bool _openingRanking = false;
   String? _nickname;
   String? _submitError;
   String? _retryError;
@@ -212,34 +214,57 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
   }
 
   Future<void> _editMyNickname() async {
-    final current = await _resolveDisplayNickname();
-    if (!mounted) return;
-    final taken = _snapshot?.rankedEntries
-            .where((e) => !e.isMe)
-            .map((e) => e.nickname) ??
-        const <String>[];
-    final ok = await showTimeAttackNicknameDialog(
-      context,
-      initialName: current,
-      takenNames: taken,
-    );
-    if (!ok || !mounted) return;
+    if (_editingName) return;
+    setState(() => _editingName = true);
+    try {
+      final fromBoard = _snapshot?.myEntry?.nickname.trim();
+      final current = (fromBoard != null && fromBoard.isNotEmpty)
+          ? fromBoard
+          : (await _profile.getSavedNickname()) ?? _nickname ?? '';
+      if (!mounted) return;
+      final taken = _snapshot?.rankedEntries
+              .where((e) => !e.isMe)
+              .map((e) => e.nickname) ??
+          const <String>[];
+      final ok = await showTimeAttackNicknameDialog(
+        context,
+        initialName: current,
+        takenNames: taken,
+      );
+      if (!ok || !mounted) return;
 
-    final nickname = await _resolveDisplayNickname();
-    final snapshot = await _loadThisRunSnapshot(nickname);
-    if (!mounted) return;
-    setState(() {
-      _nickname = nickname;
-      _snapshot = snapshot;
-    });
+      final nickname = (await _profile.getSavedNickname()) ?? current;
+      final snapshot = await _loadThisRunSnapshot(nickname);
+      if (!mounted) return;
+      setState(() {
+        _nickname = nickname;
+        _snapshot = snapshot;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _editingName = false);
+      } else {
+        _editingName = false;
+      }
+    }
   }
 
-  void _openRanking() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const TimeAttackLeaderboardScreen(),
-      ),
-    );
+  Future<void> _openRanking() async {
+    if (_openingRanking || _retrying || _processing) return;
+    setState(() => _openingRanking = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const TimeAttackLeaderboardScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingRanking = false);
+      } else {
+        _openingRanking = false;
+      }
+    }
   }
 
   Future<void> _retryChallenge() async {
@@ -373,11 +398,22 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
-                  onPressed: _openRanking,
-                  icon: const Icon(Icons.emoji_events, size: 18),
-                  label: const Text(
-                    'ランキングを見る',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  onPressed: (_openingRanking || _retrying || _processing)
+                      ? null
+                      : _openRanking,
+                  icon: _openingRanking
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFFFD54F),
+                          ),
+                        )
+                      : const Icon(Icons.emoji_events, size: 18),
+                  label: Text(
+                    _openingRanking ? '読み込み中…' : 'ランキングを見る',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFFFD54F),
@@ -399,7 +435,9 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
                     Expanded(
                       child: OutlinedButton(
                         onPressed:
-                            _retrying ? null : () => Navigator.of(context).pop(),
+                            (_retrying || _openingRanking)
+                                ? null
+                                : () => Navigator.of(context).pop(),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white70,
                           side: const BorderSide(color: Colors.white38),
@@ -417,7 +455,8 @@ class _TimeAttackResultScreenState extends State<TimeAttackResultScreen>
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _retrying ? null : _retryChallenge,
+                        onPressed:
+                            (_retrying || _openingRanking) ? null : _retryChallenge,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6B46C1),
                           foregroundColor: Colors.white,

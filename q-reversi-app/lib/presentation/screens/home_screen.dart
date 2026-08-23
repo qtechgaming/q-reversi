@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../../data/firebase/backend_warmup.dart';
 import 'game_mode_selection_screen.dart';
 
 /// ホーム画面
@@ -12,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? _versionLabel;
+  bool _opening = false;
 
   @override
   void initState() {
@@ -25,6 +27,26 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _versionLabel = 'v${info.version}';
     });
+  }
+
+  Future<void> _openModes() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    BackendWarmup.kickoff();
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const GameModeSelectionScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _opening = false);
+      } else {
+        _opening = false;
+      }
+    }
   }
 
   @override
@@ -71,15 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Align(
                     alignment: Alignment.center,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const GameModeSelectionScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: _opening ? null : _openModes,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 32,

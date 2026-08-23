@@ -3,7 +3,7 @@ description: Q-Reversi - Quantum Computing Reversi Game
 repository: https://github.com/q-tech-gaming/q-reversi
 homepage: https://q-tech-gaming.github.io/q-reversi/
 publish_to: 'none'
-version: 1.4.1+10
+version: 1.4.2+11
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

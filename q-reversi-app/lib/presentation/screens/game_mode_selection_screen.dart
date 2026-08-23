@@ -15,6 +15,7 @@ import '../../domain/entities/player.dart';
 import '../../domain/services/game_service.dart';
 import '../widgets/operation_order_settings_dialog.dart';
 import '../widgets/app_legal_info_sheet.dart';
+import '../../data/firebase/backend_warmup.dart';
 import 'time_attack_start_screen.dart';
 
 /// ゲームモード選択画面
@@ -188,6 +189,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
                 'タイムアタックでランキング',
                 Icons.timer,
                 () {
+                  BackendWarmup.kickoff();
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -317,6 +319,7 @@ class _GameModeSelectionScreenState extends State<GameModeSelectionScreen> {
   }
   
   Future<void> _openVsMode(BuildContext context) async {
+    BackendWarmup.kickoff();
     final hasSave = await _vsPersistence.hasSavedGame();
     if (!context.mounted) return;
     if (!hasSave) {

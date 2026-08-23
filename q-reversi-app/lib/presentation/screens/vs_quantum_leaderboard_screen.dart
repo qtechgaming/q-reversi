@@ -29,6 +29,7 @@ class _VsQuantumLeaderboardScreenState
   VsQuantumLeaderboardSnapshot? _snapshot;
   Object? _error;
   bool _loading = true;
+  bool _editingName = false;
 
   static const _rowStride = 49.0;
 
@@ -112,23 +113,33 @@ class _VsQuantumLeaderboardScreenState
   }
 
   Future<void> _editNickname() async {
-    final profile = TimeAttackLocalProfileService();
-    final current = await profile.resolveNickname() ??
-        _snapshot?.myEntry?.nickname ??
-        '';
-    if (!mounted) return;
-    final ok = await showTimeAttackNicknameDialog(
-      context,
-      initialName: current,
-      takenNames: _snapshot?.rankedEntries
-              .where((e) => !e.isMe)
-              .map((e) => e.nickname) ??
-          const [],
-      title: 'プレイヤー名を変更',
-      confirmLabel: '保存',
-    );
-    if (ok && mounted) {
-      await _load();
+    if (_editingName) return;
+    setState(() => _editingName = true);
+    try {
+      final fromBoard = _snapshot?.myEntry?.nickname.trim();
+      final current = (fromBoard != null && fromBoard.isNotEmpty)
+          ? fromBoard
+          : (await TimeAttackLocalProfileService().getSavedNickname()) ?? '';
+      if (!mounted) return;
+      final ok = await showTimeAttackNicknameDialog(
+        context,
+        initialName: current,
+        takenNames: _snapshot?.rankedEntries
+                .where((e) => !e.isMe)
+                .map((e) => e.nickname) ??
+            const [],
+        title: 'プレイヤー名を変更',
+        confirmLabel: '保存',
+      );
+      if (ok && mounted) {
+        await _load();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _editingName = false);
+      } else {
+        _editingName = false;
+      }
     }
   }
 
@@ -142,7 +153,7 @@ class _VsQuantumLeaderboardScreenState
         actions: [
           IconButton(
             tooltip: 'プレイヤー名',
-            onPressed: _loading ? null : _editNickname,
+            onPressed: (_loading || _editingName) ? null : _editNickname,
             icon: const Icon(Icons.badge_outlined),
           ),
           IconButton(

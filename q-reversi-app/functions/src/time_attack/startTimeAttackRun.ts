@@ -13,6 +13,9 @@ export const startTimeAttackRun = onCall(
     if (!request.auth?.uid) {
       throw new HttpsError("unauthenticated", "Authentication required");
     }
+    if (request.data?.warmup === true) {
+      return { warmed: true };
+    }
     const uid = request.auth.uid;
 
     let sequence;

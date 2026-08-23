@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../data/firebase/backend_warmup.dart';
 import '../../data/firebase/time_attack_run_remote_service.dart';
 import '../../data/time_attack/time_attack_run_launcher.dart';
 import '../../domain/time_attack/time_attack_run_state.dart';
@@ -19,10 +20,19 @@ class TimeAttackStartScreen extends StatefulWidget {
 class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
   final _launcher = TimeAttackRunLauncher();
   bool _starting = false;
+  bool _openingRanking = false;
   String? _error;
 
+  bool get _busy => _starting || _openingRanking;
+
+  @override
+  void initState() {
+    super.initState();
+    BackendWarmup.kickoff();
+  }
+
   Future<void> _start() async {
-    if (_starting) return;
+    if (_busy) return;
     setState(() {
       _starting = true;
       _error = null;
@@ -50,6 +60,24 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
     }
   }
 
+  Future<void> _openRanking() async {
+    if (_busy) return;
+    setState(() => _openingRanking = true);
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const TimeAttackLeaderboardScreen(),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingRanking = false);
+      } else {
+        _openingRanking = false;
+      }
+    }
+  }
+
   void _openResultPreview(TimeAttackRunState runState) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -63,7 +91,9 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: !_busy,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('タイムアタックモード', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color(0xFF1A1F3A),
@@ -72,7 +102,9 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
           IconButton(
             tooltip: '操作設定',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => showOperationOrderSettingsDialog(context),
+            onPressed: _busy
+                ? null
+                : () => showOperationOrderSettingsDialog(context),
           ),
         ],
       ),
@@ -122,13 +154,13 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
                   ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: _starting ? null : _start,
+                    onPressed: _busy ? null : _start,
                     child: const Text('再試行'),
                   ),
                 ],
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: _starting ? null : _start,
+                  onPressed: _busy ? null : _start,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6B46C1),
                     foregroundColor: Colors.white,
@@ -153,17 +185,20 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const TimeAttackLeaderboardScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.emoji_events, size: 22),
-                  label: const Text(
-                    'RANKING',
-                    style: TextStyle(
+                  onPressed: _busy ? null : _openRanking,
+                  icon: _openingRanking
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFFFFD54F),
+                          ),
+                        )
+                      : const Icon(Icons.emoji_events, size: 22),
+                  label: Text(
+                    _openingRanking ? '読み込み中…' : 'RANKING',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
@@ -223,6 +258,7 @@ class _TimeAttackStartScreenState extends State<TimeAttackStartScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }
